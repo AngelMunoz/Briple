@@ -41,12 +41,12 @@
 
 | Principle | In this app |
 |---|---|
-| **Content over chrome** | **No top bar, no hamburger, no kebab menu** — a page's title *is* its content header, in the Metro type ramp. Navigation lives in the bottom app-bar (phone) or split-view pane (desktop); secondary commands live in the app bar's `⋯` overflow, Windows-Phone style. |
+| **Content over chrome** | **No top bar, no hamburger, no kebab menu** — a page's title *is* its content header, in the Metro type ramp. The app bar holds commands, never navigation (Windows Phone model): the `⋯` menu reaches the Plan and Settings pages, and every page returns via back (system back, or the chevron). |
 | **Typography is the UI** | Metrino type ramp carries hierarchy (below); display text stays light (300). |
 | **Accent discipline** | `--metro-accent` only for: selected day, today marker, current view chip, circuit headers, primary action, active pivot. Never decoration. |
-| **Motion with meaning** | Pivot panning and expand/collapse use `--metro-transition-normal` (250ms) with metrino's easing; controls snap at 167ms. |
-| **Honest states** | Empty, parse-warnings, "before/after the plan", update-ready — all visible states, not popups. Offline is *not* a state: it's the mode. |
-| **4px grid** | All spacing from `--metro-spacing-xs..xxl`. Touch targets ≥ 44px everywhere. |
+| **Alive with motion** | Pivot selection is a tap: content slides on `--metro-transition-slow` (333ms), headers move at 167ms. Expand/collapse and controls use `--metro-transition-normal` (250ms) and fast (167ms) with metrino's easing. |
+| **Authentically digital** | Empty, parse-warnings, "before/after the plan", update-ready — all visible states, not popups. Offline is *not* a state: it's the mode. |
+| **4px grid** | All spacing from `--metro-spacing-xs..xxl`. Touch targets: 34px recommended, 26px minimum (Windows Phone 7 UI guide). |
 
 ### Type ramp (metrino `typography.css` → this app)
 
@@ -61,22 +61,26 @@
 | Caption (12) | `--metro-font-size-small` | Secondary meta, cue lines |
 | Badge (11 bold) | `.badge` | Chips: view, circuit headers, step labels |
 
-Theme: metrino defaults to dark and follows `prefers-color-scheme`. Manual override = `data-theme="light|dark"` on `<html>`, accent = `accent="teal"` etc. (21 names, `AccentColor` DU already bound in Metrino.Ripple). Both persist locally.
+Theme: metrino follows `prefers-color-scheme` and has no default of its own. Manual override = `data-theme="light|dark"` on `<html>`, accent = `accent="teal"` (21 names, `AccentColor` DU already bound in Metrino.Ripple). Both persist locally.
 
 ---
 
 ## 3. Information architecture
 
 ```
-Shell (bottom app-bar on phone / split-view pane on desktop — no top chrome)
-├── Today            ← landing screen. Date block + view chip + pivot [Day | Week]
-│     └── Session detail   (system back / chevron; circuits, RIR, rests)
-├── Plan             ← what's in the file (all variants), guía (extras),
+Hub and spokes (no top chrome, no persistent nav bar — app bars hold commands)
+├── Today (home)     ← landing screen. Date block + view chip + pivot [Day | Week]
+│    │                  app bar: ⋯ menu (Plan · Settings)
+│     └── Session detail   (page; back chevron; circuits, RIR, rests)
+├── Plan (page)      ← back chevron. what's in the file (all variants), guía (extras),
 │    │                  imports/history, load file, re-anchor
+│    │                  app bar: Load file + ⋯ menu (export copy · remove plan)
 │     └── Import preview dialog
 ├── Progress         ← V2 (hidden in V1)
-└── Settings         ← theme (system/light/dark), accent, install; V1.1+
+└── Settings (page)  ← back chevron. theme (system/light/dark), accent, install; V1.1+
 ```
+
+Navigation follows the Windows Phone model: Today is the hub; Plan and Settings are spokes reached from the ⋯ menu. Back is the system back gesture, with a chevron in the page header where no system back exists (browser tab). The app bar itself holds commands, not navigation.
 
 Every screen reads from the local store; nothing in V1 needs the network after first install — and no screen says so, either.
 
@@ -108,7 +112,7 @@ Phone frames are 1:1 layout sketches (32-char canvas ≈ 390dp). Content in the 
 │   └──────────────────────┘     │
 │                                │
 ├────────────────────────────────┤
-│  ◎today    ▤plan    ⚙settings  │ bottom app-bar = the whole nav
+│  ⋯                             │ app-bar menu: Plan · Settings
 └────────────────────────────────┘
 ```
 
@@ -140,7 +144,7 @@ The date header renders even with no data — the calendar is the product, empty
 │ ┃ + 3 más · 1 circuito   tap → │ caption
 │                                │
 ├────────────────────────────────┤
-│  ◎today    ▤plan    ⚙settings  │
+│  ⋯                             │
 └────────────────────────────────┘
 ```
 
@@ -173,7 +177,7 @@ Notes:
 │                                │
 │  3 sesiones esta semana        │ summary, secondary
 ├────────────────────────────────┤
-│  ◎today    ▤plan    ⚙settings  │
+│  ⋯                             │
 └────────────────────────────────┘
 ```
 
@@ -226,7 +230,7 @@ Notes:
 
 ```
 ┌────────────────────────────────┐
-│  Plan                          │ title 42 light
+│ ‹ Plan                         │ back chevron; title 42 light
 │                                │
 │  Plan de Entrenamiento en      │ #meta titulo · semanas
 │  Circuito · 4 semanas          │
@@ -252,7 +256,7 @@ Notes:
 │  IMPORTS                       │
 │  · plan_4sem.txt  ✓ ok   hoy   │ current (history re-loadable)
 ├────────────────────────────────┤
-│  ◎today  ▤plan  ⚙settings   ⋯  │ ⋯ = export copy · remove plan
+│  ⋯                             │ menu: export copy · remove plan
 └────────────────────────────────┘
 ```
 
@@ -292,11 +296,7 @@ The dialog shows **what was imported, all of it** — variants are listed per Ge
 ```
  update available
 ┌────────────────────────────────┐
-│  ┌──────────────────────┐      │ toast — never auto-reload
-│  │ ✓ Update ready       │      │
-│  │ Reload to get the    │      │
-│  │ latest version  [↻]  │      │
-│  └──────────────────────┘      │
+│  ✓ Update ready     [Reload]   │ inline state — never auto-reload
 │                                │
 │  MONDAY · 14 SEPTEMBER         │
 │  14                            │
@@ -306,40 +306,43 @@ The dialog shows **what was imported, all of it** — variants are listed per Ge
 │  ┃ …                           │
 │                                │
 ├────────────────────────────────┤
-│  ◎today    ▤plan    ⚙settings  │
+│  ⋯                             │
 └────────────────────────────────┘
 ```
 
 - There is **no offline banner** — the app is fully local, and offline is its normal operating mode (§7). Nothing about the UI changes when the network does.
-- **Update**: the SW detects a new precache → `metro-toast` with **Reload**. Never auto-reload: the phone may be mid-session in a gym with bad signal.
+- **Update**: the SW detects a new precache → `metro-toast` announces it (toasts have no action button) and a quiet inline **Reload** state appears on Today until used. Never auto-reload: the phone may be mid-session in a gym with bad signal.
 
 ### 4.8 Desktop adaptation  `S7` — responsive, same product
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│ ┌───────────┐  MONDAY · 14 SEPTEMBER                                   │
-│ │ ◎ Today   │  14                                                      │
-│ │           │  Semana 2 de 4 · RIR 2-3                                 │
-│ │ ▤ Plan    │  Hombre · 3 días                                    ▾    │
-│ │           │                                                          │
-│ │ ⚙ Settings│  ‹[L]  M   X   J   V   S   D ›                           │
-│ │           │  Day      Week                                           │
-│ │           │ ═══════════──────────────────                            │
-│ │           │   ┌────────────────────────┐  ┌───────────────────────┐  │
-│ │           │   ┃ Full Body A            │  │ next / recent context │  │
-│ │           │   ┃ A1 Sentadilla  6-8     │  │ (upcoming session,    │  │
-│ │           │   ┃ A2 Press banca 6-8     │  │  semana progress)     │  │
-│ └───────────┘   └────────────────────────┘  └───────────────────────┘  │
+│      MONDAY · 14 SEPTEMBER                                             │
+│      14                                                                │
+│      Semana 2 de 4 · RIR 2-3                                           │
+│      Hombre · 3 días                                              ▾    │
+│                                                                        │
+│      ‹[L]  M   X   J   V   S   D ›                                     │
+│      Day      Week                                                     │
+│     ═══════════──────────────────                                      │
+│       ┌────────────────────────┐  ┌───────────────────────┐            │
+│       ┃ Full Body A            │  │ next / recent context │            │
+│       ┃ A1 Sentadilla  6-8     │  │ (upcoming session,    │            │
+│       ┃ A2 Press banca 6-8     │  │  semana progress)     │            │
+│       └────────────────────────┘  └───────────────────────┘            │
+│                                                                        │
+├────────────────────────────────────────────────────────────────────────┤
+│  ⋯                                              menu: Plan · Settings  │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 | | Phone (< 720px) — primary | Desktop (≥ 720px) |
 |---|---|---|
-| Shell | Bottom app-bar (thumb reach); `⋯` overflow on Plan | `metro-split-view` nav pane, inline; commands in a `metro-menu-flyout` |
+| Shell | Bottom app-bar (thumb reach); `⋯` menu on every page | Same app bar; content centered on a max-width grid |
 | Week pivot | Vertical day rows | `metro-grid` 7 columns, same data |
 | Session detail | Full-bleed page | Centered column, max ~640px content width |
 | Import preview | Full-bleed dialog | Centered `metro-content-dialog` |
-| Day strip | Pannable, chevron edges | Same; mouse wheel scrolls it |
+| Day strip | Chevron buttons | Same |
 
 Rule: the phone layout is the design of record; desktop only adds room. No desktop-only interactions; content stays centered on a max-width grid so big screens look composed, not stretched.
 
@@ -433,12 +436,11 @@ All bound in Metrino.Ripple (`registerMetroXxx` + `Html.metroXxx`):
 
 | Purpose | Component | Notes |
 |---|---|---|
-| Desktop nav pane | `metro-split-view` | Inline pane ≥ 720px |
-| Phone shell nav + commands | `metro-app-bar` (+ `-button`, `-toggle-button`) | Bottom bar; `⋯` overflow for export/remove |
+| Page commands (phone + desktop) | `metro-app-bar` (+ `-button`) | Bottom bar. Commands only; `⋯` menu reaches Plan/Settings and export/remove |
 | View chip → variant selector | `metro-menu-flyout` | Grouped by Genero; instant switch |
-| Day / Week switch | `metro-pivot` + `metro-pivot-item` | Swipe panning, 250ms |
-| Day strip | `metro-list-view` (horizontal) or row of `metro-button` | Selected = accent |
-| Week list (phone) | `metro-list-view` | Row tap → Day |
+| Day / Week switch | `metro-pivot` + `metro-pivot-item` | Tap selection; content slide 333ms (slow token), headers 167ms |
+| Day strip | row of `metro-button` | list-view is vertical-only. Selected = accent |
+| Week rows (phone) | plain rows (`metro-stack-panel`) | list-view renders text only; rows need markup. Row tap → Day |
 | Week grid (desktop) | `metro-grid` | 7 columns |
 | Session / exercise layout | `metro-stack-panel`, `metro-border` | Accent rule on card; hairlines inside |
 | Start date | `metro-date-picker-roller` (phone) / `metro-date-picker` | WP-style roller suits one-hand use |
@@ -446,13 +448,13 @@ All bound in Metrino.Ripple (`registerMetroXxx` + `Html.metroXxx`):
 | Import preview | `metro-content-dialog` | Contents + start date + warnings |
 | Destructive confirm (replace file) | `metro-message-dialog` | |
 | Parse progress | `metro-progress-ring` | Indeterminate |
-| Toasts (loaded, update) | `metro-toast` | Update toast action: Reload |
+| Toasts (loaded, update) | `metro-toast` | No action button. Update: persistent toast + inline Reload state on Today |
 | Commands overflow | `metro-menu-flyout` | Export copy, remove plan |
 | Icons | `metro-icon` | 131-name map |
 | Theme / accent (Settings V1.1) | `data-theme` + `accent` attributes | Per metrino README; `AccentColor` DU bound |
 | Month calendar (V2) | `metro-calendar` / `metro-calendar-date-picker` | Already bound when needed |
 
-Deliberately unused in V1: `metro-info-bar` (no offline notice — nothing to announce), `live-tile` family, `semantic-zoom`, `hub`/`panorama`.
+Deliberately unused in V1: `metro-info-bar` (no offline notice — nothing to announce), `live-tile` family, `semantic-zoom`, `hub`/`panorama`, `metro-split-view` (nav pane is a later era pattern).
 
 ---
 
@@ -545,7 +547,7 @@ Local-first, single source of truth = IndexedDB. Offline isn't degraded mode —
 
 1. Types + line-format parser + warning model (§7) — pure F#, testable headless with the real fixture file
 2. Projection (date → session) over (import, view, anchor)
-3. Shell + bottom app-bar nav + Today/Day with empty state (S1, S2)
+3. Shell + app bar (commands + ⋯ menu) + Today/Day with empty state (S1, S2)
 4. Week pivot + selectedDate + plan-week chip (S3, F3)
 5. View chip + flyout over all variants (F2b) — pure re-render
 6. Local store + import/preview dialog with contents + start date (S5a/b, F2)
