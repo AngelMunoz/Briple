@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Briple.fsproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Briple.Tests.fsproj" />
+  </Folder>
+  <Project Path="Metrino.Ripple/Metrino.Ripple.fsproj" />
+</Solution>

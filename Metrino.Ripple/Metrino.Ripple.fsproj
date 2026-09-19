@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Interop.fs" />
+    <Compile Include="Types.fs" />
+    <Compile Include="Elements.fs" />
+    <Compile Include="Register.fs" />
+    <Compile Include="Buttons.fs" />
+    <Compile Include="DateTime.fs" />
+    <Compile Include="Dialogs.fs" />
+    <Compile Include="Inputs.fs" />
+    <Compile Include="Layout.fs" />
+    <Compile Include="Navigation.fs" />
+    <Compile Include="Primitives.fs" />
+    <Compile Include="Progress.fs" />
+    <Compile Include="Selection.fs" />
+    <Compile Include="Tiles.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Fable.Ripple.Dom" Version="1.0.0-beta.1" />
+  </ItemGroup>
+
+</Project>

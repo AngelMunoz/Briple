@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <DefineConstants>FABLE_COMPILER</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The sources under test, compiled directly into the test project so
+         the demo app (Program.fs, metrino) stays out of the test lane. -->
+    <Compile Include="..\src\Plan\Types.fs" />
+    <Compile Include="..\src\Plan\Parser.fsi" />
+    <Compile Include="..\src\Plan\Parser.fs" />
+    <Compile Include="..\src\Store\Db.fsi" />
+    <Compile Include="..\src\Store\Db.fs" />
+    <Compile Include="QUnit.fsi" />
+    <Compile Include="QUnit.fs" />
+    <Compile Include="Parser.Tests.fs" />
+    <Compile Include="Store.Tests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Fable.Promise" Version="3.2.1" />
+    <PackageReference Include="Fable.Browser.IndexedDB" Version="2.2.0" />
+    <PackageReference Include="XParsec" Version="1.0.0" />
+  </ItemGroup>
+
+</Project>
