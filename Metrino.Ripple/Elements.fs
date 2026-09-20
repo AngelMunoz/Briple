@@ -68,6 +68,21 @@ type MetroSplitView =
   abstract show: unit -> unit
   abstract hide: unit -> unit
 
+/// `metro-hub`.
+[<AllowNullLiteral>]
+type MetroHub =
+  inherit HTMLElement
+  /// The slotted `metro-hub-section` elements, in document order.
+  abstract sections: HTMLElement array
+  /// Section whose inline start is nearest the scroll position (-1 when
+  /// empty). The setter scrolls that section to the container gutter - a
+  /// scroll, not a state commit.
+  abstract selectedIndex: int with get, set
+  /// Scroll a section's inline start to the container gutter; `smooth` by
+  /// default (Metro easing tokens), `auto` jumps, reduced motion always
+  /// jumps. The index is clamped into range.
+  abstract scrollToSection: index: float * ?behavior: ScrollBehavior -> unit
+
 /// `metro-context-menu`.
 [<AllowNullLiteral>]
 type MetroContextMenu =

@@ -39,6 +39,10 @@ let pivotIndex: Var<float> = Var.create 0.0
 
 let importError: Var<string option> = Var.create None
 
+// Shared metrino toast host. ToastHost registers its own <metro-toast>
+// element on the document body at the first `show`.
+let toastHost: ToastHost = ToastHost()
+
 // --- Boot ------------------------------------------------------------------
 
 let isValidView (plan: Plan) (genero: Genero) (opcionId: string) : bool =
@@ -170,7 +174,7 @@ let importText (fileName: string) (raw: string) : JS.Promise<unit> =
       let variants =
         plan.Bloques |> List.sumBy(fun bloque -> bloque.Opciones.Length)
 
-      showToast {
+      toastHost.show {
         title = None
         message = strings().ToastLoaded variants plan.Semanas
         severity = Some Metrino.Ripple.Success

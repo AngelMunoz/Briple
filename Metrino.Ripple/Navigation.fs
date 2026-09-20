@@ -5,6 +5,7 @@ open Metrino.Ripple
 [<AutoOpen>]
 module Navigation =
 
+  open Browser.Types
   open Fable.Core
   open Fable.Ripple.Dom
 
@@ -56,6 +57,37 @@ module Navigation =
   [<Import("registerMetroSplitView", "@angelmunoz/metrino/split-view")>]
   let registerMetroSplitView: unit -> unit = jsNative
 
+  (* Programmatic-scroll helpers exported by the hub module (metrino 0.5). *)
+
+  /// Clamp an index into `[0, count - 1]` (0 for an empty collection).
+  [<Import("clampIndex", "@angelmunoz/metrino/hub")>]
+  let clampIndex(index: float, count: float) : float = jsNative
+
+  /// Index of the target nearest `scrollLeft` (-1 when there are none);
+  /// the first target wins a tie.
+  [<Import("nearestIndex", "@angelmunoz/metrino/hub")>]
+  let nearestIndex(scrollLeft: float, targets: float array) : int = jsNative
+
+  /// Scroll behavior for a programmatic scroll; reduced motion downgrades
+  /// to `"auto"`.
+  [<Import("resolveScrollBehavior", "@angelmunoz/metrino/hub")>]
+  let resolveScrollBehavior
+    (behavior: ScrollBehavior option, reduceMotion: bool)
+    : ScrollBehavior =
+    jsNative
+
+  /// The Metro easing curve `cubic-bezier(0.1, 0.9, 0.2, 1)` evaluated at
+  /// linear progress `t` in [0, 1]; `values` overrides the control points
+  /// (`x1, y1, x2, y2` with `x1`/`x2` in [0, 1]).
+  [<Import("metroEase", "@angelmunoz/metrino/hub")>]
+  let metroEase(t: float) : float = jsNative
+
+  /// The Metro easing curve `cubic-bezier(0.1, 0.9, 0.2, 1)` evaluated at
+  /// linear progress `t` in [0, 1]; `values` overrides the control points
+  /// (`x1, y1, x2, y2` with `x1`/`x2` in [0, 1]).
+  [<Import("metroEase", "@angelmunoz/metrino/hub")>]
+  let metroEaseValues(t: float, values: float array) : float = jsNative
+
   type Html with
 
     static member inline metroAppBar(args: DomItem list) : DomItem =
@@ -99,6 +131,15 @@ module Navigation =
     static member inline header(s: WithGetValueString<'s>) : DomItem =
       attr.custom("header", s.get_Value)
 
+    /// Opt-in hub section settling: with `snap`, pans settle on section
+    /// boundaries (`scroll-snap-type: x mandatory`). Off by default -
+    /// free pan with content peek.
+    static member inline snap(v: bool) : DomItem =
+      Base.booleanAttribute "snap" v
+
+    static member inline snap(s: WithGetValueBool<'s>) : DomItem =
+      Base.bindBooleanAttribute "snap" s.get_Value
+
     /// Panorama backdrop image URL.
     static member inline backgroundImage(v: string) : DomItem =
       attr.custom("background-image", v)
@@ -120,7 +161,9 @@ module Navigation =
     static member inline menuItem(s: WithGetValueBool<'s>) : DomItem =
       Base.bindBooleanAttribute "menu-item" s.get_Value
 
-    /// Active pivot item (camelCase attribute - set as property).
+    /// Active pivot item (camelCase - set as property). The hub reads the
+    /// same property (nearest section) and its setter scrolls instead of
+    /// committing state.
     static member inline selectedIndex(v: float) : DomItem =
       Base.property "selectedIndex" v
 
@@ -147,6 +190,14 @@ module Navigation =
        shared (Types); open is base `attr.isOpen`; title/label/icon are base. *)
 
   type on with
+
+    /// `metro-hub`: the in-view section settled (`selectionchanged`, detail
+    /// `{ selectedIndex }`). Fires once per settle - never per pan frame -
+    /// and only when the index changed.
+    static member inline hubSelectionChanged
+      (h: HubSelectionChanged -> unit)
+      : DomItem =
+      Internal.onCustom "selectionchanged" h
 
     /// `metro-pivot`: active item changed (`selectionchanged`).
     static member inline pivotSelectionChanged

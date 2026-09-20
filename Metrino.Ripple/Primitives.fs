@@ -64,22 +64,22 @@ module Primitives =
   [<Import("registerMetroTooltip", "@angelmunoz/metrino/tooltip")>]
   let registerMetroTooltip: unit -> unit = jsNative
 
-  (* Global toast API. metrino 0.4.0's toast.d.ts declares `showToast` /
-     `hideToast` module exports, but the built module only exports
-     `MetroToast` and `registerMetroToast` — importing the declared names
-     fails at module load. These helpers reproduce the source's own global
-     behavior (one lazily attached `metro-toast` instance) over the typed
-     element API. *)
+  (* Global toast API. metrino 0.5 removed the module-level `showToast` /
+     `hideToast` in favor of the exported `ToastHost` controller: each
+     instance lazily attaches its own `metro-toast` to `document.body` on
+     the first `show` and can be `dispose`d independently. *)
 
-  /// The document's global `metro-toast` instance, attached on first use.
-  [<Emit("(document.querySelector('metro-toast') ?? document.body.appendChild(document.createElement('metro-toast')))")>]
-  let globalToast() : MetroToast = jsNative
-
-  /// Show a toast on the global `metro-toast` instance; returns its id.
-  let showToast(options: ToastOptions) : string = (globalToast()).show(options)
-
-  /// Hide one toast by id on the global instance.
-  let hideToast(id: string) : unit = (globalToast()).hide(id)
+  /// metrino `ToastHost` (`@angelmunoz/metrino` root export) - the official
+  /// global toast API since 0.5.0. Construct with `ToastHost()`.
+  [<AllowNullLiteral; Import("ToastHost", "@angelmunoz/metrino")>]
+  type ToastHost() =
+    /// Show a toast; attaches the host element on first call. Returns the
+    /// toast id. Throws for unknown severity values.
+    member _.show(options: ToastOptions) : string = jsNative
+    member _.hide(id: string) : unit = jsNative
+    member _.clearAll() : unit = jsNative
+    /// Remove the host element; the next `show` creates a fresh one.
+    member _.dispose() : unit = jsNative
 
   type Html with
 

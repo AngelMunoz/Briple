@@ -27,6 +27,13 @@ module Buttons =
   [<Import("registerMetroRepeatButton", "@angelmunoz/metrino/repeat-button")>]
   let registerMetroRepeatButton: unit -> unit = jsNative
 
+  /// True when a hyperlink `href` is safe to navigate: empty passes (the
+  /// element renders as a button); otherwise only relative URLs and the
+  /// `http`, `https`, `mailto` and `tel` schemes - `javascript:`, `data:`
+  /// and `blob:` are rejected.
+  [<Import("isSafeHyperlink", "@angelmunoz/metrino")>]
+  let isSafeHyperlink(href: string) : bool = jsNative
+
   type Html with
 
     static member inline metroButton(args: DomItem list) : DomItem =

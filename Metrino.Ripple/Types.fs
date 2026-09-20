@@ -202,8 +202,9 @@ type LiveTileItem = {
   message: string option
 }
 
-/// `metro-toast` options (`showToast` / `MetroToast.show`). `duration` is
-/// milliseconds; `0` keeps the toast persistent.
+/// `metro-toast` options (`ToastHost.show` / `MetroToast.show`). `duration`
+/// is milliseconds; `0` keeps the toast persistent. `title`/`message` render
+/// as plain text; an unknown `severity` makes `show` throw a `TypeError`.
 type ToastOptions = {
   title: string option
   message: string
@@ -258,6 +259,11 @@ type SelectionChanged = {
 
 /// `metro-pivot`: `selectionchanged` detail `{ selectedIndex: number }`.
 type PivotSelectionChanged = { selectedIndex: int }
+
+/// `metro-hub`: `selectionchanged` detail `{ selectedIndex: number }` - same
+/// name and shape as the pivot event, but fired once when the pan settles
+/// and only when the index actually changed.
+type HubSelectionChanged = { selectedIndex: int }
 
 /// `metro-list-box`: `selectionchanged` detail
 /// `{ selectedIndices, selectedItems, selectedValues }`.
@@ -427,6 +433,16 @@ module Types =
 
     static member inline stretch(s: WithGetValue<'s, Stretch>) : DomItem =
       attr.custom("stretch", s.get_Value >> string)
+
+    /// Extra sanitizer hook run before the built-in allowlist (rich text
+    /// block, rich edit box). Property-only: `f` is a function, not markup.
+    static member inline sanitize(f: string -> string) : DomItem =
+      Base.property "sanitize" f
+
+    static member inline sanitize
+      (s: WithGetValue<'s, string -> string>)
+      : DomItem =
+      Base.bindProperty "sanitize" s.get_Value
 
   (*
         Events shared by several components - declared once, here.
