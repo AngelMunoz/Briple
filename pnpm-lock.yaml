@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@angelmunoz/metrino':
-        specifier: 0.5.0
-        version: 0.5.0(@mdi/js@7.4.47)(lit@3.3.3)
+        specifier: 0.5.1
+        version: 0.5.1(@mdi/js@7.4.47)(lit@3.3.3)
       '@mdi/js':
         specifier: 7.4.47
         version: 7.4.47
@@ -188,8 +188,8 @@ importers:
 
 packages:
 
-  '@angelmunoz/metrino@0.5.0':
-    resolution: {integrity: sha512-eXEIHCxDWtqQhqHJhWIfxvr/beu2KHsCv7HsiwaRANGGBfvaI0fqBt5u5BaJ+gsXpioR+mMIXw60jV385xbkcg==, tarball: https://npm.pkg.github.com/download/@angelmunoz/metrino/0.5.0/24b47276759c18f4058c4f34064f2dc601e95613}
+  '@angelmunoz/metrino@0.5.1':
+    resolution: {integrity: sha512-P77fncCPgjiqfXgswe2vecK/P72fjnOqZW86N5CAS/eKAB6ub0cjoRpu92fbUXQHWfR7kh8t/qfzGKtVWZVM8Q==, tarball: https://npm.pkg.github.com/download/@angelmunoz/metrino/0.5.1/367ef66a697b09150e1bcfe32c4858c6c594f239}
     peerDependencies:
       '@mdi/js': 7.4.47
       lit: 3.3.3
@@ -515,7 +515,7 @@ packages:
 
 snapshots:
 
-  '@angelmunoz/metrino@0.5.0(@mdi/js@7.4.47)(lit@3.3.3)':
+  '@angelmunoz/metrino@0.5.1(@mdi/js@7.4.47)(lit@3.3.3)':
     dependencies:
       '@mdi/js': 7.4.47
       lit: 3.3.3
