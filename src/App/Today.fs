@@ -1,10 +1,9 @@
 module App.Today
 
-// Today screen : date block, empty state with
-// the import paths, and the Day pivot holding the day strip and the
-// session card.
-// session card. The app bar holds
-// commands only: its ⋯ menu reaches the Plan and Settings pages.
+// Today screen: date block, empty state with the import paths, and the
+// Day pivot. The pivot is the enclosing component; its Day item holds the
+// day hub - one section per day of the week - and its chevrons. The app bar
+// holds commands only: its ⋯ menu reaches the Plan and Settings pages.
 
 
 open System
@@ -20,34 +19,9 @@ open App.State
 
 // --- Models --------------------------------------
 
-type StripDay = {
-  Date: DateOnly
-  Letter: string
-  IsSession: bool
-  IsSelected: bool
-}
-
 let weekDates(selected: DateOnly) : DateOnly list =
   let monday = mondayOf selected
   [ for offset in 0..6 -> addDays monday offset ]
-
-let stripModel
-  (plan: Plan option)
-  (genero: Genero, opcionId: string)
-  (anchor: DateOnly option)
-  (selected: DateOnly)
-  (letters: string list)
-  : StripDay list =
-  List.zip letters (weekDates selected)
-  |> List.map(fun (letter, date) -> {
-    Date = date
-    Letter = letter
-    IsSession =
-      match plan, anchor with
-      | Some p, Some a -> trainsOn p genero opcionId a date
-      | _ -> false
-    IsSelected = sameDate date selected
-  })
 
 type CardExercise = { Name: string; Scheme: string option }
 
@@ -55,7 +29,6 @@ type CardModel = {
   Title: string
   Badge: string
   Exercises: CardExercise list
-  More: (int * int) option
 }
 
 let schemeLine(exercise: Ejercicio) : string option =
@@ -64,6 +37,8 @@ let schemeLine(exercise: Ejercicio) : string option =
   |> String.concat " · "
   |> fun line -> if line = "" then None else Some line
 
+// The card shows the full routine of the dia, flat: every exercise with its
+// scheme. Mesociclo, circuit grouping, and guía detail live in slice 7.
 let cardModel
   (dia: Dia)
   (weekdayName: string)
@@ -74,21 +49,15 @@ let cardModel
   let circuits =
     exercises |> List.map(fun e -> e.Circuito) |> List.distinct |> List.length
 
-  let visible =
-    exercises
-    |> List.truncate 2
-    |> List.map(fun e -> {
-      Name = e.Nombre
-      Scheme = schemeLine e
-    })
-
   {
     Title = dia.Titulo |> Option.defaultValue weekdayName
     Badge = badge exercises.Length circuits
-    Exercises = visible
-    More =
-      let remaining = exercises.Length - visible.Length
-      if remaining > 0 then Some(remaining, circuits) else None
+    Exercises =
+      exercises
+      |> List.map(fun e -> {
+        Name = e.Nombre
+        Scheme = schemeLine e
+      })
   }
 
 // --- View -------------------------------------------------------------------
@@ -202,59 +171,6 @@ let planLine() =
     Html.text planLineText
   ]
 
-let dotStyle(isSession: bool) =
-  if isSession then
-    "width:6px;height:6px;border-radius:50%;background:var(--metro-accent)"
-  else
-    "width:6px;height:6px;border-radius:50%;background:transparent"
-
-let stripButton(day: StripDay) =
-  Html.metroButton [
-    attr.className "strip-day"
-    attr.style
-      "min-width:34px;min-height:44px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px"
-    yield! (if day.IsSelected then [ attr.accent Blue ] else [])
-    on.click(fun _ -> selectedDate.Value <- day.Date)
-    Html.span [ attr.className "caption"; Html.text day.Letter ]
-    Html.span [ attr.style(dotStyle day.IsSession) ]
-  ]
-
-let chevron (direction: string) (move: int) =
-  Html.metroButton [
-    attr.className "strip-day"
-    attr.style "min-width:34px;min-height:34px"
-    on.click(fun _ -> selectedDate.Value <- addDays selectedDate.Value move)
-    Html.metroIcon [ attr.icon direction ]
-  ]
-
-let stripRow() =
-  Html.div [
-    attr.style "display:flex;align-items:center;gap:4px;padding:0 8px"
-    chevron "back" -1
-    Html.switchWith(
-      (fun () ->
-        let plan =
-          parsed.Value |> Option.map(fun parsedPlan -> parsedPlan.Plan)
-
-        let anchor =
-          activeImport.Value |> Option.map(fun import -> import.Anchor)
-
-        let (genero, opcionId) = view.Value
-
-        let letters =
-          weekDates selectedDate.Value
-          |> List.map(fun date -> weekdayNarrow(locale(), toDateTime date))
-
-        stripModel plan (genero, opcionId) anchor selectedDate.Value letters),
-      fun days ->
-        Html.div [
-          attr.style "display:flex;flex:1;justify-content:space-between;gap:2px"
-          yield! days |> List.map stripButton
-        ]
-    )
-    chevron "forward" 1
-  ]
-
 let cardView (date: DateOnly) (dia: Dia) =
   let s = strings()
   let weekday = weekdayLong(locale(), toDateTime date)
@@ -288,17 +204,6 @@ let cardView (date: DateOnly) (dia: Dia) =
              | None -> [])
         ]
       ])
-
-    yield!
-      (match model.More with
-       | Some(remaining, circuits) -> [
-           Html.div [
-             attr.className "caption"
-             attr.style "opacity:0.65;margin-top:10px"
-             Html.text(s.MoreExercises remaining circuits)
-           ]
-         ]
-       | None -> [])
   ]
 
 let quietLine(text: string) =
@@ -333,6 +238,112 @@ let dayContent
         | None -> quietLine s.PlanDone
   | _ -> Html.none
 
+// --- Day hub ----------------------------------------------------------------
+
+// The raw emit lives in a nested module the signature file does not declare:
+// Fable drops [<Emit>] bindings that a signature file exposes (see Locale.fs).
+module private Dom =
+  [<Emit("window.requestAnimationFrame($0)")>]
+  let requestAnimationFrame(callback: unit -> unit) : unit = jsNative
+
+// The metrino hub surface this screen drives (metrino 0.5). The hub owns no
+// selection state: chevrons and the mount scroll call `scrollToSection`, and
+// a pan reports the settled section back through `selectionchanged`.
+[<AllowNullLiteral>]
+type HubElement =
+  inherit HTMLElement
+  abstract selectedIndex: float
+  abstract sections: HTMLElement array
+  abstract scrollToSection: index: float * behavior: string -> unit
+
+let mutable dayHub: HubElement = Unchecked.defaultof<_>
+
+let dayIndexOf(weekStart: DateOnly) =
+  daysBetween weekStart selectedDate.Value
+
+let markSelectedSection(index: int) =
+  if not(isNull dayHub) then
+    dayHub.sections
+    |> Array.iteri(fun i section ->
+      if i = index then
+        section.setAttribute("selected", "")
+      else
+        section.removeAttribute("selected"))
+
+let chevronButton (direction: string) (step: int) =
+  Html.button [
+    attr.className "day-chevron"
+    attr.style "min-height:34px"
+    on.click(fun _ ->
+      if not(isNull dayHub) then
+        let target = int dayHub.selectedIndex + step
+
+        if target < 0 || target > 6 then
+          // Week rollover: the rebuild keyed on the new week opens on the day.
+          selectedDate.Value <- addDays selectedDate.Value step
+        else
+          dayHub.scrollToSection(float target, "smooth"))
+    Html.metroIcon [ attr.icon direction ]
+  ]
+
+let daySection
+  (plan: Plan option)
+  (anchor: DateOnly option)
+  (viewValue: Genero * string)
+  (weekStart: DateOnly)
+  (index: int, date: DateOnly)
+  =
+  Html.metroHubSection [
+    attr.header(weekdayShort(locale(), toDateTime date))
+    yield!
+      (if index = dayIndexOf weekStart then
+         [ attr.custom("selected", "") ]
+       else
+         [])
+    on.click(fun _ ->
+      // Tap a peeking section to bring its day into view. Taps on the
+      // in-view section stay free for the session card (slice 7).
+      if not(isNull dayHub) && int dayHub.selectedIndex <> index then
+        dayHub.scrollToSection(float index, "smooth"))
+    dayContent plan anchor viewValue date
+  ]
+
+// The hub subtree is keyed on the week of the selected date, never on the
+// date itself: a day change is a scroll, only a week rollover rebuilds.
+let dayHubView
+  (plan: Plan option)
+  (anchor: DateOnly option)
+  (viewValue: Genero * string)
+  (weekStart: DateOnly)
+  =
+  let dates = weekDates weekStart
+
+  Html.div [
+    attr.style "display:flex;flex-direction:column;gap:4px"
+    Html.div [
+      attr.style "display:flex;justify-content:center;gap:16px;padding:4px 0"
+      chevronButton "back" -1
+      chevronButton "forward" 1
+    ]
+    Html.metroHub [
+      attr.snap true
+      attr.ref(fun el ->
+        let hub = unbox<HubElement> el
+        dayHub <- hub
+        // Open on the selected day of the week; instant, once laid out.
+        Dom.requestAnimationFrame(fun _ ->
+          hub.scrollToSection(float(dayIndexOf weekStart), "auto")))
+      on.hubSelectionChanged(fun detail ->
+        selectedDate.Value <- addDays weekStart detail.selectedIndex
+        markSelectedSection detail.selectedIndex)
+      yield!
+        dates
+        |> List.indexed
+        |> List.map(fun (index, date) ->
+          daySection plan anchor viewValue weekStart (index, date))
+    ]
+  ]
+
 let pivot() =
   Html.metroPivot [
     attr.selectedIndex pivotIndex
@@ -345,9 +356,9 @@ let pivot() =
           (parsed.Value |> Option.map(fun parsedPlan -> parsedPlan.Plan),
            activeImport.Value |> Option.map(fun import -> import.Anchor),
            view.Value,
-           selectedDate.Value)),
-        fun (plan, anchor, viewValue, date) ->
-          dayContent plan anchor viewValue date
+           mondayOf selectedDate.Value)),
+        fun (plan, anchor, viewValue, weekStart) ->
+          dayHubView plan anchor viewValue weekStart
       )
     ]
     Html.metroPivotItem [
@@ -389,7 +400,6 @@ let view() =
           Html.div [
             attr.style "display:flex;flex-direction:column;gap:8px"
             planLine()
-            stripRow()
             pivot()
           ]
       )

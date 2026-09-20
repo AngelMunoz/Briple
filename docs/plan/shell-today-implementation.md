@@ -1,6 +1,6 @@
 # Implementation Plan - Shell, Projection, Today (slices 2 to 5)
 
-> Status: slices 2 and 3 are done. Paused for the metrino 0.5.0 bindings update (section 10).
+> Status: slices 2, 3 and 3b are done (3b awaits review, not committed). Slices 4 and 5 are next.
 > Design: `docs/design/training-pwa-storyboards.md`, build order items 2 to 5.
 > Style: Simplified Technical English (ASD-STE100). Procedural sentences: 20 words or fewer. Descriptive sentences: 25 words or fewer.
 
@@ -10,7 +10,7 @@
 |---|---|
 | 2 | Projection: pure date to session functions |
 | 3 | Shell, app bar, Today screen S1 and S2, interim import |
-| 3b | Day hub inversion: hub of day sections inside the Day pivot. Paused for metrino 0.5.0 |
+| 3b | Day hub inversion: hub of day sections inside the Day pivot |
 | 4 | Week pivot S3, selectedDate, plan week chip, F3 navigation |
 | 5 | View chip and variant flyout, F2b |
 
@@ -36,6 +36,7 @@ These facts come from the Metrino.Ripple bindings and the component sources. The
 |---|---|
 | Day navigation: a `metro-hub` of seven day sections inside the Day pivot item. Supersedes the strip row (slice 3b). | The pivot cannot pan, so the hub is the pan surface. The strip above the pivot stayed visible in the Week view, where it had no effect. |
 | Week rows: plain rows, not list-view. | The rows need per-row markup: today bar, counts. list-view renders text only. |
+| Today card: the full routine, flat. Mesociclo, circuit grouping, rests, and guía detail stay in the session detail (slice 7). | Today is the calendar surface; the detail is the plan view. Criteria revision 2026-09-20. |
 | Pivot: tap selection. Chevrons scroll the hub day in Day view; they move a week in Week view. | The pivot has no pan handler (section 2). |
 | Touch targets: 34 px target, 26 px floor. | Windows Phone 7 UI guide. The 44 px figure is UWP. |
 | Navigation: Today is home. Plan and Settings are pages with a back chevron. The Today app bar menu holds the Plan and Settings items. | The app bar holds commands, never navigation (Windows Phone model). |
@@ -195,10 +196,10 @@ S2, import present:
 - Plan line: "Semana N de M · RIR x-y". `planWeek` gives N. `tryMesocicloRir` gives the RIR text; omit when None. Outside the range: the quiet table line.
 - Day strip: seven `metro-button` (section 3). Letters: `Intl` weekday narrow. Dots: `trainsOn` per date, accent color. Selected day: accent. Target 34 px, floor 26 px.
 - Chevrons: `back` and `forward` icons. They move `selectedDate` one day.
-- Session card: accent rule on the left. Title `.header`. Badge line `.badge-text`: "6 EJERCICIOS · 2 CIRCUITOS". First two exercises with scheme lines. Fields verbatim; `-` omitted. Last line: "+ N más · M circuitos". The card is non-interactive until slice 7.
+- Session card: accent rule on the left. Title `.header`. Badge line `.badge-text`: "6 EJERCICIOS · 2 CIRCUITOS". The full routine: every exercise of the dia with its scheme line, flat. Fields verbatim; `-` omitted. No truncation line. Mesociclo, circuit grouping, rests, and guía detail stay in slice 7. The card is non-interactive until slice 7.
 - Rest day: centered caption "Descanso · próxima sesión: {weekday}, {title}" from `nextSession`.
 - Dia title fallback: when `Dia.Titulo` is None, use the locale weekday name.
-- Pivot: two `metro-pivot-item`, headers "Day" and "Week". Day holds the strip and card. Week holds a placeholder until slice 4. `selectionchanged` writes `pivotIndex`. Set `selectedIndex` as a property.
+- Pivot: two `metro-pivot-item`, headers "Day" and "Week". Day holds the day hub and card. Week holds a placeholder until slice 4. `selectionchanged` writes `pivotIndex`. Set `selectedIndex` as a property.
 - The view chip is slice 5. The plan line reads the `view` Var.
 
 Slice 3b supersedes the day strip and chevron bullets above. See section 10.
@@ -272,11 +273,11 @@ All green before the next slice:
 | ISO week math errors | Small helper, table tests. |
 | Interim import survives past slice 6 | INTERIM comments. Slice 6 removes them. |
 
-## 10. Slice 3b - Day hub inversion (paused)
+## 10. Slice 3b - Day hub inversion
 
-Metrino 0.5.0 shipped the hub API from the pre-validation, plus other changes. Work on this repo pauses for the bindings update. Resume order: bindings (10.1), then this slice, then slices 4 and 5.
+Metrino 0.5.0 shipped the hub API from the pre-validation, plus other changes. The bindings update (10.1) landed in commit 6c895f2. This slice is implemented in the working tree; it awaits review and no commit exists yet.
 
-### 10.1 Prerequisite - Metrino.Ripple bindings for 0.5.0
+### 10.1 Prerequisite - Metrino.Ripple bindings for 0.5.0 (done)
 
 1. Update the metrino package reference to 0.5.0.
 2. Audit the 0.5.0 changelog for changes beyond the hub. Fix the affected bindings and code.
@@ -314,7 +315,11 @@ Metrino 0.5.0 shipped the hub API from the pre-validation, plus other changes. W
 
 Slices 2 and 3 are implemented and committed (29c0570). Gates were green at commit: builds clean, 24 browser tests, nine end-to-end scenarios.
 
-Paused on 2026-09-20: metrino 0.5.0 is out. Next task: the Metrino.Ripple 0.5.0 bindings update (10.1). Then slice 3b (day hub inversion), then slices 4 and 5.
+Paused on 2026-09-20: metrino 0.5.0 is out. The bindings update (10.1) landed the same day in commit 6c895f2: package 0.5.0, hub bindings (snap, selectedIndex, selectionchanged, scroll helpers), and the ToastHost migration.
+
+Slice 3b (day hub inversion) is implemented in the working tree, not committed: the Day pivot item holds the day hub, the strip row is gone. The section 8 gates re-ran green after the rework: builds clean, 24 browser tests, nine end-to-end scenarios (2, 5, and 6 reworked for the hub). Slices 4 and 5 are next.
+
+Criteria revision 2026-09-20: the Today card shows the full routine of the dia, flat (no "first two" truncation, no "+ N más" line). Mesociclo, circuit grouping, rests, and guía detail move to the session detail (slice 7). The card model, locale strings, and e2e scenario 2 reflect the revision.
 
 Implementation notes:
 

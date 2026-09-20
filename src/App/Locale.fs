@@ -30,7 +30,6 @@ type Strings = {
   PlanDone: string
   ToastLoaded: int -> int -> string
   ExercisesBadge: int -> int -> string
-  MoreExercises: int -> int -> string
   PlanMenu: string
   SettingsMenu: string
   PagePlan: string
@@ -57,8 +56,6 @@ let esStrings = {
   ExercisesBadge =
     fun ejercicios circuitos ->
       $"{ejercicios} ejercicios · {circuitos} circuitos"
-  MoreExercises =
-    fun restantes circuitos -> $"+ {restantes} más · {circuitos} circuitos"
   PlanMenu = "Plan de entrenamiento"
   SettingsMenu = "Ajustes"
   PagePlan = "Plan"
@@ -82,8 +79,6 @@ let enStrings = {
     fun variants weeks -> $"Plan loaded · {variants} variants · {weeks} weeks"
   ExercisesBadge =
     fun exercises circuits -> $"{exercises} exercises · {circuits} circuits"
-  MoreExercises =
-    fun remaining circuits -> $"+ {remaining} more · {circuits} circuits"
   PlanMenu = "Training plan"
   SettingsMenu = "Settings"
   PagePlan = "Plan"
@@ -114,6 +109,9 @@ module Intl =
   [<Emit("new Intl.DateTimeFormat($0, { weekday: 'narrow' }).format($1)")>]
   let weekdayNarrow(locale: string, date: DateTime) : string = jsNative
 
+  [<Emit("new Intl.DateTimeFormat($0, { weekday: 'short' }).format($1)")>]
+  let weekdayShort(locale: string, date: DateTime) : string = jsNative
+
   [<Emit("new Intl.DateTimeFormat($0, { day: 'numeric', month: 'long' }).format($1)")>]
   let dayMonth(locale: string, date: DateTime) : string = jsNative
 
@@ -122,6 +120,9 @@ let weekdayLong(locale: string, date: DateTime) : string =
 
 let weekdayNarrow(locale: string, date: DateTime) : string =
   Intl.weekdayNarrow(locale, date)
+
+let weekdayShort(locale: string, date: DateTime) : string =
+  Intl.weekdayShort(locale, date)
 
 let dayMonth(locale: string, date: DateTime) : string =
   Intl.dayMonth(locale, date)

@@ -65,6 +65,18 @@ async function see(page, text, note) {
     }
 }
 
+// All seven days' content coexists in the hub, so text presence does not
+// prove selection: the `selected` attribute on the section does.
+async function seeSelectedDay(page, header, note) {
+    try {
+        await page
+            .locator(`metro-hub-section[selected][header="${header}"]`)
+            .waitFor({ timeout: 8000 });
+    } catch {
+        throw new Error(`expected the selected day section to be "${header}" (${note})`);
+    }
+}
+
 // 1. First run with no plan: the empty state.
 await scenario('first run shows the empty state (es)', 'es-ES', async (page) => {
     await see(page, 'Tu calendario está vacío.', 'empty title');
@@ -85,12 +97,18 @@ await scenario('sample import renders the session day (es)', 'es-ES', async (pag
     await see(page, '6 ejercicios · 2 circuitos', 'card badge line');
     await see(page, 'Sentadilla con barra', 'first exercise');
     await see(page, '6-8 · 1-2 · 3 min', 'verbatim scheme line');
-    await see(page, '+ 4 más · 2 circuitos', 'truncated remainder line');
+    // The full routine renders flat: no truncation, the last exercise shows.
+    await see(page, 'Elevaciones laterales', 'last exercise of the routine');
+    await see(page, '12-20 · 0-1 · 90 s', 'last exercise scheme line');
     await see(page, 'Semana 38 · T3', 'ISO week and quarter in the date block');
-    // Day strip: locale letters, selected Monday, dots on session days only.
-    for (const letter of ['L', 'M', 'X', 'J', 'V', 'S', 'D']) {
-        await page.getByRole('button', { name: letter, exact: true }).waitFor({ timeout: 8000 });
+    // Day hub: seven sections, one per day of the week; Monday is selected.
+    const sections = page.locator('metro-hub > metro-hub-section');
+    await sections.first().waitFor({ timeout: 8000 });
+    const sectionCount = await sections.count();
+    if (sectionCount !== 7) {
+        throw new Error(`expected 7 day sections in the hub, saw ${sectionCount}`);
     }
+    await seeSelectedDay(page, 'lun', 'Monday selected in the day hub');
 });
 
 // 3. The same flow through the real file picker input ("Load a plan").
@@ -110,22 +128,26 @@ await scenario('Import survives a reload through IndexedDB', 'es-ES', async (pag
     await see(page, 'Semana 1 de 4 · RIR 3', 'plan week line after reload');
 });
 
-// 5. Rest day: moving to Tuesday shows the quiet next-session line (S2 note).
+// 5. Rest day: the chevron settles the hub on Tuesday and the quiet
+//    next-session line shows there (S2 note).
 await scenario('Rest day shows the quiet next-session line', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
     await see(page, 'Full Body A', 'session card before moving');
-    await page.locator('metro-button:has(metro-icon[icon="forward"])').first().click();
+    await page.locator('button.day-chevron:has(metro-icon[icon="forward"])').first().click();
+    await seeSelectedDay(page, 'mar', 'chevron moved to Tuesday');
+    await see(page, 'martes', 'date block moved to Tuesday');
     await see(page, 'Descanso · próxima sesión: miércoles, Full Body B', 'rest-day line');
 });
 
-// 6. Day strip selection: tapping Wednesday renders Full Body B.
-await scenario('Day strip selection switches the session card', 'es-ES', async (page) => {
+// 6. Hub selection: tapping a peeking section brings its day into view.
+await scenario('Tapping a hub section selects its day', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
     await see(page, 'Full Body A', 'Monday card');
-    await page.getByRole('button', { name: 'X', exact: true }).click();
-    await see(page, 'Full Body B', 'Wednesday card');
-    await page.getByRole('button', { name: 'L', exact: true }).click();
-    await see(page, 'Full Body A', 'back to Monday card');
+    await page.locator('metro-hub > metro-hub-section').nth(2).click();
+    await seeSelectedDay(page, 'mié', 'tap moved to Wednesday');
+    await see(page, 'miércoles', 'date block moved to Wednesday');
+    await page.locator('metro-hub > metro-hub-section').nth(0).click();
+    await seeSelectedDay(page, 'lun', 'tap moved back to Monday');
 });
 
 // 7. Navigation: ⋯ menu reaches the Plan page, chevron returns (F1/F2b shell).

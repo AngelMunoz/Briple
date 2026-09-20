@@ -14,6 +14,8 @@ registerMetroPivot()
 registerMetroPivotItem()
 registerMetroAppBar()
 registerMetroAppBarButton()
+registerMetroHub()
+registerMetroHubSection()
 registerMetroIcon()
 registerMetroToast()
 

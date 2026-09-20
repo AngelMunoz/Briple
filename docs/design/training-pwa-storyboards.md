@@ -127,21 +127,27 @@ The date header renders even with no data — the calendar is the product, empty
 │  Semana 2 de 4 · RIR 2-3       │ plan week + mesociclo target
 │  Hombre · 3 días            ▾  │ view chip → flyout (all variants)
 │                                │
-│  ‹[L]  M   X   J   V   S   D › │ day strip, device-locale letters
-│    ●       ●       ●           │ ● = session day of the VIEWED
-│                                │   variant (3 días: Lun·Mié·Vie)
-│  Day      Week                 │ pivot (accent underline = Day)
-│ ═══════════──────────────────  │
-│                                │
-│ ┃ Full Body A                  │ session card, accent rule
-│ ┃ 6 EJERCICIOS · 2 CIRCUITOS   │ badge line — real data, no guesses
-│ ┃ ──────────────────────────── │
-│ ┃ A1  Sentadilla con barra     │ circuit·orden idiom (A1, A2…)
+│  Day      Week                 │ pivot — the enclosing component;
+│ ═══════════──────────────────  │   day navigation lives inside Day
+│         ‹  ›                   │ chevrons scroll the day hub
+│  MON                           │ day hub: one section per day of
+│ ┃ Full Body A        ┃ TUE     │ the week; selected header in
+│ ┃ 6 EJERCICIOS · 2 CIRCUITOS   │ accent; pan or chevron moves the
+│ ┃ ──────────────────────────── │ day; the next day peeks at the edge
+│ ┃ Sentadilla con barra         │ the FULL routine, flat — every
+│ ┃     6-8 · RIR 1-2 · 3 min    │ exercise of the day with its
+│ ┃ Press banca                  │ scheme; no "+ más" line
 │ ┃     6-8 · RIR 1-2 · 3 min    │
-│ ┃ A2  Press banca              │
-│ ┃     6-8 · RIR 1-2 · 3 min    │
-│ ┃ A3  Remo con barra           │
-│ ┃ + 3 más · 1 circuito   tap → │ caption
+│ ┃ Remo con barra               │
+│ ┃     8-10 · RIR 1-2 · 3 min   │
+│ ┃ Press militar                │
+│ ┃     8-12 · RIR 1-2 · 2-3 min │
+│ ┃ Curl femoral tumbado         │
+│ ┃     10-15 · RIR 0-1 · 2 min  │
+│ ┃ Elevaciones laterales        │
+│ ┃     12-20 · RIR 0-1 · 90 s   │
+│ ┃                     tap →    │ the whole card opens the plan
+│                                │ detail: circuits, mesociclo, guía
 │                                │
 ├────────────────────────────────┤
 │  ⋯                             │
@@ -150,10 +156,10 @@ The date header renders even with no data — the calendar is the product, empty
 
 Notes:
 
-- **View chip** — "Hombre · 3 días ▾" opens a `metro-menu-flyout` listing every variant in the file, grouped by Genero (*Hombre: 3 días — Full Body A/B/C · 5 días — Mixtos; Mujer: 5 días — Inferior/Superior*). Selecting one re-renders Day strip dots, week rows, and session content instantly — nothing is re-imported, nothing discarded. The chip is the only place Género/Opción appear on Today.
+- **View chip** — "Hombre · 3 días ▾" opens a `metro-menu-flyout` listing every variant in the file, grouped by Genero (*Hombre: 3 días — Full Body A/B/C · 5 días — Mixtos; Mujer: 5 días — Inferior/Superior*). Selecting one re-renders the day hub, week rows, and session content instantly — nothing is re-imported, nothing discarded. The chip is the only place Género/Opción appear on Today.
 - **"Semana N de M"** is the plan's own week counter (anchor + N−1 weeks), shown under the date — calendar week and plan week are both visible at all times. `RIR 2-3` comes from the file's `#x mesociclo` for that week (structured extraction, §7; absent → line omitted).
-- **Day strip**: letters/order from the device locale; dots mark projected session days of the viewed variant. `[ ]` = selected, accent. 6/7-day variants simply put dots on Sáb/Dom.
-- The whole card is a tap target → Session detail (S4).
+- **Day hub** (slice 3b revision): one `metro-hub` section per day of the week lives *inside* the Day pivot item — the old strip row sat outside the pivot and showed day controls in the Week view, which broke containment. Headers come from the device locale; the selected section's header takes the accent. Pan, chevrons, and header taps all agree on one `selectedDate`.
+- **The card shows the complete routine for the day** (criteria revision 2026-09-20): every exercise with its scheme line, flat — no circuit ids, no "+ N más" truncation. The whole card is a tap target → Session detail (S4), which is where mesociclo context, circuit grouping, rests, and guía lines live.
 - **Rest day** variant: quiet centered line — *"Descanso · próxima sesión: Miércoles, Full Body B"* — never an error look. Rest days fall out of the projection naturally (weekday not in the variant's `Dias`).
 
 ### 4.3 Today — Week pivot (the "expand")  `S3`
@@ -221,6 +227,7 @@ Notes:
 
 Notes:
 
+- **The detail adds what Today omits** (criteria revision 2026-09-20): Today's card lists the full routine flat; this screen shows the same routine *as a plan* — the mesociclo badge, circuit grouping with the `A1/B1` idiom, circuit headers, rests, and guía lines.
 - **Circuits are the primary grouping** — the format's `Circuito` (A/B) + `Vueltas` render as a badge-style header per group; `Orden` becomes the gym-standard `A1/A2/B1` idiom. A heavier divider separates circuits; exercises inside a circuit are separated by spacing alone (they belong together — that's what a circuit *means*).
 - **Every field renders verbatim**: `Reps` ("6-8", but also "30-45 s" or "10-15 reps por ronda" — time-based work shown as-is), `Rir` (omitted when `"-"`), `Descanso`, `Notas` (caption line under the scheme when non-empty).
 - The trailer lines under the last circuit come from `#x regla-circuito` / `#x descansos` — one or two, not the whole list (full text lives in Plan → Guía).
@@ -342,7 +349,7 @@ The dialog shows **what was imported, all of it** — variants are listed per Ge
 | Week pivot | Vertical day rows | `metro-grid` 7 columns, same data |
 | Session detail | Full-bleed page | Centered column, max ~640px content width |
 | Import preview | Full-bleed dialog | Centered `metro-content-dialog` |
-| Day strip | Chevron buttons | Same |
+| Day hub | `metro-hub` + chevron buttons | Same |
 
 Rule: the phone layout is the design of record; desktop only adds room. No desktop-only interactions; content stays centered on a max-width grid so big screens look composed, not stretched.
 
@@ -407,7 +414,7 @@ Switching *Hombre · 3 días* → *Mujer · 5 días* changes dots, rows, and con
 flowchart LR
     D[Day pivot · selected date] -- "pivot: Week" --> W[Week of that date]
     W -- "tap a day row" --> D2[Day pivot · that date]
-    D -- "day strip / chevrons" --> D3[adjacent day]
+    D -- "day hub pan / chevrons" --> D3[adjacent day]
     W -- "‹ ›" --> W2[adjacent week]
     D3 -- "pivot: Week" --> W3[week of that day]
     D2 -- "tap session card" --> S[Session detail]
@@ -439,7 +446,7 @@ All bound in Metrino.Ripple (`registerMetroXxx` + `Html.metroXxx`):
 | Page commands (phone + desktop) | `metro-app-bar` (+ `-button`) | Bottom bar. Commands only; `⋯` menu reaches Plan/Settings and export/remove |
 | View chip → variant selector | `metro-menu-flyout` | Grouped by Genero; instant switch |
 | Day / Week switch | `metro-pivot` + `metro-pivot-item` | Tap selection; content slide 333ms (slow token), headers 167ms |
-| Day strip | row of `metro-button` | list-view is vertical-only. Selected = accent |
+| Day hub | `metro-hub` + `metro-hub-section` | The pivot cannot pan; the hub is the pan surface. Selected header = accent |
 | Week rows (phone) | plain rows (`metro-stack-panel`) | list-view renders text only; rows need markup. Row tap → Day |
 | Week grid (desktop) | `metro-grid` | 7 columns |
 | Session / exercise layout | `metro-stack-panel`, `metro-border` | Accent rule on card; hairlines inside |
