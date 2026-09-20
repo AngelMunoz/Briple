@@ -5,6 +5,7 @@ module App.Locale
 // day names never leak to the UI as-is.
 
 open System
+open Plan.Types
 
 type Lang =
   | Es
@@ -34,6 +35,8 @@ type Strings = {
   PageSettings: string
   ImportFailed: string
   ImportFailedDetail: int -> string -> string
+  GeneroWord: Genero -> string
+  DiasUnit: string
 }
 
 val esStrings: Strings

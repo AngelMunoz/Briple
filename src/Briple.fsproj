@@ -15,6 +15,8 @@
     <Compile Include="Store\Db.fs" />
     <Compile Include="App\Locale.fsi" />
     <Compile Include="App\Locale.fs" />
+    <Compile Include="App\Variants.fsi" />
+    <Compile Include="App\Variants.fs" />
     <Compile Include="App\State.fsi" />
     <Compile Include="App\State.fs" />
     <Compile Include="App\Today.fsi" />

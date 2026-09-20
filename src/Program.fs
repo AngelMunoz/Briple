@@ -19,6 +19,14 @@ registerMetroHubSection()
 registerMetroIcon()
 registerMetroToast()
 
+// The view-chip flyout is not part of the first paint: it registers through a
+// dynamic import, and the chip stays inert until the chunk resolves.
+promise {
+  do! registerMetroMenuFlyoutDynamic()
+  App.State.flyoutReady.Value <- true
+}
+|> Promise.start
+
 promise {
   let! stored = Briple.Store.getActiveImport()
   let! storedView = Briple.Store.getViewState()

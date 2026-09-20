@@ -44,6 +44,13 @@ module Primitives =
   [<Import("registerMetroMenuFlyout", "@angelmunoz/metrino/menu-flyout")>]
   let registerMetroMenuFlyout: unit -> unit = jsNative
 
+  /// Dynamic-import variant of `registerMetroMenuFlyout`: the component loads
+  /// in its own chunk instead of the entry bundle. Resolves when the custom
+  /// element is registered. The emit is the arrow itself: the call site
+  /// invokes it.
+  [<Emit("() => import('@angelmunoz/metrino/menu-flyout').then((m) => m.registerMetroMenuFlyout())")>]
+  let registerMetroMenuFlyoutDynamic: unit -> JS.Promise<unit> = jsNative
+
   /// Register `metro-person-picture` (`@angelmunoz/metrino/person-picture`).
   [<Import("registerMetroPersonPicture", "@angelmunoz/metrino/person-picture")>]
   let registerMetroPersonPicture: unit -> unit = jsNative

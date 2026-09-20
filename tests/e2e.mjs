@@ -6,6 +6,7 @@
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -59,7 +60,11 @@ async function scenario(name, locale, run) {
 
 async function see(page, text, note) {
     try {
-        await page.getByText(text, { exact: false }).first().waitFor({ timeout: 8000 });
+        await page
+            .getByText(text, { exact: false })
+            .filter({ visible: true })
+            .first()
+            .waitFor({ timeout: 8000 });
     } catch {
         throw new Error(`expected to see "${text}" (${note})`);
     }
@@ -200,6 +205,108 @@ await scenario('Week pivot: rows, summary, and row tap', 'es-ES', async (page) =
     await page
         .locator('metro-hub-section[selected][header="mar"]')
         .waitFor({ timeout: 8000 });
+});
+
+// 11. View chip: the flyout groups the variants by Genero, a selection
+//     switches the variant instantly, and the view persists across reload.
+await scenario('View chip switches variant and persists', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await see(page, 'Hombre · 3 días', 'chip shows the default view');
+    await page.locator('metro-button.view-chip').click();
+    await see(page, 'Mujer', 'flyout group header');
+    await see(page, '5 días — DÍAS MIXTOS', 'Hombre 5dias item label');
+    // Select the Mujer variant: the chip updates, the flyout closes, and the
+    // day hub re-renders with the new variant's Monday session.
+    await page.getByText('L-X-V TREN INFERIOR · M-J TREN SUPERIOR').click();
+    await see(page, 'Mujer · 5 días', 'chip shows the new view');
+    await page
+        .getByText('L-X-V TREN INFERIOR · M-J TREN SUPERIOR')
+        .waitFor({ state: 'hidden', timeout: 8000 });
+    await see(page, 'Tren inferior · día pesado', "Monday card of the new variant");
+    // The selection rode the store's ViewState lane: reload keeps the view.
+    await page.reload();
+    await page.waitForSelector('metro-app-bar', { timeout: 15000 });
+    await see(page, 'Mujer · 5 días', 'view persisted across reload');
+    await see(page, 'Tren inferior · día pesado', 'variant card after reload');
+});
+
+// 12. Boot fallback: a stored view that names a missing variant resolves to
+//     the first variant in file order, and the store value is rewritten so
+//     the next boot reads a valid view. The store is seeded by hand before
+//     the app boots, through the same two-store shape the app writes.
+const fixtureText = readFileSync(fixture, 'utf8');
+await scenario('Boot rewrites a stored view naming a missing variant', 'es-ES', async (page) => {
+    await page.addInitScript(
+        ({ raw }) => {
+            const req = indexedDB.open('briple-training', 1);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                const imports = db.createObjectStore('imports', { keyPath: 'id' });
+                imports.createIndex('importedAt', 'importedAt');
+                db.createObjectStore('state');
+            };
+            req.onsuccess = () => {
+                const db = req.result;
+                const tx = db.transaction(['imports', 'state'], 'readwrite');
+                tx.objectStore('imports').put({
+                    id: 'seeded-import',
+                    fileName: 'plan_entrenamiento_4sem.txt',
+                    importedAt: '2026-09-13T10:00:00Z',
+                    anchor: '2026-09-07',
+                    raw,
+                });
+                tx.objectStore('state').put('seeded-import', 'activeImportId');
+                tx.objectStore('state').put(
+                    '{"genero":"hombre","opcionId":"7dias"}',
+                    'viewState',
+                );
+                tx.oncomplete = () => db.close();
+            };
+        },
+        { raw: fixtureText },
+    );
+    await page.reload();
+    await page.waitForSelector('metro-app-bar', { timeout: 15000 });
+    // The bogus "7dias" view resolves to the first variant in file order.
+    await see(page, 'Hombre · 3 días', 'chip shows the first variant');
+    await see(page, 'Full Body A', 'day hub projected the first variant');
+    // The store's viewState lane now carries the resolved view.
+    const rewritten = await page.waitForFunction(
+        async () => {
+            const db = await new Promise((resolve, reject) => {
+                const req = indexedDB.open('briple-training', 1);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+            const json = await new Promise((resolve, reject) => {
+                const tx = db.transaction('state', 'readonly');
+                const req = tx.objectStore('state').get('viewState');
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+                tx.oncomplete = () => db.close();
+            });
+            return json ? JSON.parse(json).opcionId === '3dias' : false;
+        },
+        { timeout: 8000 },
+    );
+    if (!rewritten) throw new Error('expected the store viewState to be rewritten to 3dias');
+});
+
+// 13. Light dismiss: a tap on the backdrop closes the flyout without
+//     selecting anything.
+await scenario('Flyout light dismiss closes without changing the view', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await see(page, 'Full Body A', 'default variant rendered');
+    await page.locator('metro-button.view-chip').click();
+    await see(page, 'Mujer', 'flyout open');
+    // The backdrop covers the viewport while the flyout is open; the menu
+    // sits top-left, so this tap lands on the backdrop.
+    await page.mouse.click(900, 400);
+    await page
+        .getByText('L-X-V TREN INFERIOR · M-J TREN SUPERIOR')
+        .waitFor({ state: 'hidden', timeout: 8000 });
+    await see(page, 'Hombre · 3 días', 'view unchanged after dismiss');
+    await see(page, 'Full Body A', 'day hub unchanged after dismiss');
 });
 
 await browser.close();

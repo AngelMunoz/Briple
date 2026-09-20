@@ -17,6 +17,7 @@ open Plan.Parser
 open Plan.Projection
 open Briple.Store
 open App.Locale
+open App.Variants
 
 type Page =
   | TodayPage
@@ -39,6 +40,10 @@ let pivotIndex: Var<float> = Var.create 0.0
 
 let importError: Var<string option> = Var.create None
 
+// The view-chip flyout registers through a dynamic import (Program.fs); until
+// that chunk resolves, the tag is an unknown element and the chip stays inert.
+let flyoutReady: Var<bool> = Var.create false
+
 // Persistence subscription for selectedDate, created in `init` so its
 // immediate first run cannot clobber the restored value with today's date.
 let mutable private datePersist: IDisposable option = None
@@ -50,20 +55,17 @@ let toastHost: ToastHost = ToastHost()
 // --- Boot ------------------------------------------------------------------
 
 let isValidView (plan: Plan) (genero: Genero) (opcionId: string) : bool =
-  plan.Bloques
-  |> List.exists(fun bloque ->
-    bloque.Genero = genero
-    && bloque.Opciones |> List.exists(fun opcion -> opcion.Id = opcionId))
+  Variants.isValid plan genero opcionId
 
 /// First Genero's first Opcion in file order.
-let defaultView(plan: Plan) : Genero * string =
-  plan.Bloques
-  |> List.tryHead
-  |> Option.bind(fun bloque ->
-    bloque.Opciones
-    |> List.tryHead
-    |> Option.map(fun opcion -> (bloque.Genero, opcion.Id)))
-  |> Option.defaultValue(Hombre, "3dias")
+let defaultView(plan: Plan) : Genero * string = Variants.firstVariant plan
+
+/// Persists and applies a view-chip selection. Same anchor, same store: only
+/// the ViewState lane and the view var change.
+let setView (genero: Genero) (opcionId: string) : JS.Promise<unit> = promise {
+  do! setViewState { Genero = genero; OpcionId = opcionId }
+  view.Value <- (genero, opcionId)
+}
 
 let init
   (stored: StoredImport option)
@@ -93,14 +95,14 @@ let init
       activeImport.Value <- Some import
       parsed.Value <- Some parsedPlan
 
-      let resolvedView =
-        storedView
-        |> Option.filter(fun candidate ->
-          isValidView plan candidate.Genero candidate.OpcionId)
-        |> Option.map(fun candidate -> (candidate.Genero, candidate.OpcionId))
-        |> Option.defaultWith(fun () -> defaultView plan)
-
+      let resolvedView, rewrite = Variants.resolveView plan storedView
       view.Value <- resolvedView
+
+      if rewrite then
+        // The stored view named a missing variant: write the resolved one
+        // back so the next boot reads a valid view.
+        let genero, opcionId = resolvedView
+        setViewState { Genero = genero; OpcionId = opcionId } |> Promise.start
 
   // Persist every later change. Var notifies only on real changes, so the
   // immediate first run rewrites the value just read back - harmless.

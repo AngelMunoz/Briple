@@ -7,6 +7,7 @@ module App.Locale
 open System
 open Browser
 open Fable.Core
+open Plan.Types
 
 type Lang =
   | Es
@@ -41,6 +42,8 @@ type Strings = {
   PageSettings: string
   ImportFailed: string
   ImportFailedDetail: int -> string -> string
+  GeneroWord: Genero -> string
+  DiasUnit: string
 }
 
 let esStrings = {
@@ -72,6 +75,11 @@ let esStrings = {
   PageSettings = "Ajustes"
   ImportFailed = "No se pudo cargar el plan"
   ImportFailedDetail = fun linea mensaje -> $"Línea {linea}: {mensaje}"
+  GeneroWord =
+    function
+    | Hombre -> "Hombre"
+    | Mujer -> "Mujer"
+  DiasUnit = "días"
 }
 
 let enStrings = {
@@ -100,6 +108,11 @@ let enStrings = {
   PageSettings = "Settings"
   ImportFailed = "Could not load the plan"
   ImportFailedDetail = fun line message -> $"Line {line}: {message}"
+  GeneroWord =
+    function
+    | Hombre -> "Men"
+    | Mujer -> "Women"
+  DiasUnit = "days"
 }
 
 let strings() : Strings =

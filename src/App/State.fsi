@@ -30,10 +30,18 @@ val pivotIndex: Var<float>
 
 val importError: Var<string option>
 
+/// True once the lazy-registered view-chip flyout finished loading. The chip
+/// ignores taps until then; the flyout subtree renders only after.
+val flyoutReady: Var<bool>
+
 val isValidView: plan: Plan -> genero: Genero -> opcionId: string -> bool
 
 /// First Genero's first Opcion in file order.
 val defaultView: plan: Plan -> Genero * string
+
+/// Persists and applies a view-chip selection: writes the store's ViewState
+/// lane, then updates the view var. Same anchor, same store.
+val setView: genero: Genero -> opcionId: string -> JS.Promise<unit>
 
 /// Restores boot state. `storedDate` is the raw ISO selectedDate; a missing
 /// or corrupted value falls back to today. Also starts the change

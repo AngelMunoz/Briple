@@ -15,6 +15,7 @@ open Browser.Types
 open Plan.Types
 open Plan.Projection
 open App.Locale
+open App.Variants
 open App.State
 
 // --- Models --------------------------------------
@@ -170,6 +171,92 @@ let planLine() =
     attr.className "body"
     attr.style "opacity:0.6;padding:0 16px"
     Html.text planLineText
+  ]
+
+// --- View chip -----------------------------------------------------------
+// The chip is the only place Genero/Opcion appear on Today. The flyout sits
+// in the layout right below the chip: the component is position:fixed with
+// no insets, so with `open` it renders at its static spot under the chip.
+// `open` is the only mechanism: no show() call, no positioning ref.
+
+let flyoutOpen: Var<bool> = Var.create false
+
+let chipText() =
+  let genero, opcionId = view.Value
+  let s = strings()
+  $"{s.GeneroWord genero} · {Variants.display s.DiasUnit opcionId}"
+
+let viewChip() =
+  Html.metroButton [
+    attr.className "view-chip"
+    attr.style "min-height:34px;color:var(--metro-accent)"
+    on.click(fun _ ->
+      // Inert until the lazy chunk registered the component.
+      if flyoutReady.Value then
+        flyoutOpen.Value <- true)
+    Html.span [ attr.className "badge-text"; Html.text chipText ]
+    Html.metroIcon [ attr.icon "chevron-down" ]
+  ]
+
+let flyoutItem (genero: Genero) (item: VariantItem) =
+  let isActive() = view.Value = (genero, item.Id)
+
+  Html.div [
+    attr.className "menu-item"
+    // Positioned above the component's fixed backdrop: upstream paints the
+    // backdrop over the static menu container, which swallows item clicks.
+    attr.style(fun () ->
+      if isActive() then
+        "position:relative;color:var(--metro-accent)"
+      else
+        "position:relative")
+    on.click(fun _ ->
+      flyoutOpen.Value <- false
+      setView genero item.Id |> ignore)
+    Html.show(isActive, fun () -> Html.metroIcon [ attr.icon "check" ])
+    Html.span [ Html.text item.Label ]
+  ]
+
+let viewFlyout() =
+  let s = strings()
+
+  let blocks =
+    match parsed.Value with
+    | Some parsedPlan -> Variants.groups parsedPlan.Plan s.DiasUnit
+    | None -> []
+
+  let rows =
+    blocks
+    |> List.indexed
+    |> List.collect(fun (index, group) ->
+      let header =
+        Html.div [
+          attr.className "badge-text"
+          attr.style "opacity:0.6;padding:8px 16px 0"
+          Html.text(s.GeneroWord group.Genero)
+        ]
+
+      let items = group.Items |> List.map(flyoutItem group.Genero)
+
+      if index = 0 then
+        header :: items
+      else
+        Html.div [ attr.className "menu-divider" ] :: header :: items)
+
+  Html.metroMenuFlyout [
+    attr.open' flyoutOpen
+    on.close(fun _ -> flyoutOpen.Value <- false)
+    yield! rows
+  ]
+
+let viewChipArea() =
+  Html.div [
+    attr.style
+      "display:flex;flex-direction:column;align-items:flex-start;padding:0 16px"
+    viewChip()
+    // Gated on registration: before the lazy chunk lands, the tag is an
+    // unknown element and its children would render as unstyled markup.
+    Html.show((fun () -> flyoutReady.Value), viewFlyout)
   ]
 
 let cardView (date: DateOnly) (dia: Dia) =
@@ -558,6 +645,7 @@ let view() =
           Html.div [
             attr.style "display:flex;flex-direction:column;gap:8px"
             planLine()
+            viewChipArea()
             pivot()
           ]
       )

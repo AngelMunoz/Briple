@@ -17,11 +17,14 @@
     <Compile Include="..\src\Plan\Projection.fs" />
     <Compile Include="..\src\Store\Db.fsi" />
     <Compile Include="..\src\Store\Db.fs" />
+    <Compile Include="..\src\App\Variants.fsi" />
+    <Compile Include="..\src\App\Variants.fs" />
     <Compile Include="QUnit.fsi" />
     <Compile Include="QUnit.fs" />
     <Compile Include="Parser.Tests.fs" />
     <Compile Include="Store.Tests.fs" />
     <Compile Include="Projection.Tests.fs" />
+    <Compile Include="Variants.Tests.fs" />
   </ItemGroup>
 
   <ItemGroup>

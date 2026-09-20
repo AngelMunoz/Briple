@@ -427,6 +427,14 @@ module Types =
     static member inline expanded(s: WithGetValueBool<'s>) : DomItem =
       Base.bindBooleanAttribute "expanded" s.get_Value
 
+    /// Open state (menu flyout, settings flyout). Present/absent attribute,
+    /// which is the reflected boolean the components read.
+    static member inline open'(v: bool) : DomItem =
+      Base.booleanAttribute "open" v
+
+    static member inline open'(s: WithGetValueBool<'s>) : DomItem =
+      Base.bindBooleanAttribute "open" s.get_Value
+
     /// Viewbox/image scaling mode.
     static member inline stretch(v: Stretch) : DomItem =
       attr.custom("stretch", string v)
