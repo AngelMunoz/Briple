@@ -1,6 +1,6 @@
 # Implementation Plan - Shell, Projection, Today (slices 2 to 5)
 
-> Status: plan only. No code written.
+> Status: slices 2 and 3 are done. Paused for the metrino 0.5.0 bindings update (section 10).
 > Design: `docs/design/training-pwa-storyboards.md`, build order items 2 to 5.
 > Style: Simplified Technical English (ASD-STE100). Procedural sentences: 20 words or fewer. Descriptive sentences: 25 words or fewer.
 
@@ -10,6 +10,7 @@
 |---|---|
 | 2 | Projection: pure date to session functions |
 | 3 | Shell, app bar, Today screen S1 and S2, interim import |
+| 3b | Day hub inversion: hub of day sections inside the Day pivot. Paused for metrino 0.5.0 |
 | 4 | Week pivot S3, selectedDate, plan week chip, F3 navigation |
 | 5 | View chip and variant flyout, F2b |
 
@@ -33,9 +34,9 @@ These facts come from the Metrino.Ripple bindings and the component sources. The
 
 | Decision | Reason |
 |---|---|
-| Day strip: a row of seven `metro-button`. | list-view is vertical and virtualized. Seven fixed items need neither. |
+| Day navigation: a `metro-hub` of seven day sections inside the Day pivot item. Supersedes the strip row (slice 3b). | The pivot cannot pan, so the hub is the pan surface. The strip above the pivot stayed visible in the Week view, where it had no effect. |
 | Week rows: plain rows, not list-view. | The rows need per-row markup: today bar, counts. list-view renders text only. |
-| Pivot: tap selection. Chevrons move day and week. | The pivot has no pan handler (section 2). |
+| Pivot: tap selection. Chevrons scroll the hub day in Day view; they move a week in Week view. | The pivot has no pan handler (section 2). |
 | Touch targets: 34 px target, 26 px floor. | Windows Phone 7 UI guide. The 44 px figure is UWP. |
 | Navigation: Today is home. Plan and Settings are pages with a back chevron. The Today app bar menu holds the Plan and Settings items. | The app bar holds commands, never navigation (Windows Phone model). |
 | Update, slice 8: toast announces, inline Reload state on Today. | Toast has no action button. The design shows the state inline, not as a popup. |
@@ -200,6 +201,8 @@ S2, import present:
 - Pivot: two `metro-pivot-item`, headers "Day" and "Week". Day holds the strip and card. Week holds a placeholder until slice 4. `selectionchanged` writes `pivotIndex`. Set `selectedIndex` as a property.
 - The view chip is slice 5. The plan line reads the `view` Var.
 
+Slice 3b supersedes the day strip and chevron bullets above. See section 10.
+
 ### 5.8 Tests
 
 - Interim import: parse fixture, commit, `getActiveImport` round trip through the store lane.
@@ -265,12 +268,53 @@ All green before the next slice:
 |---|---|
 | `iconMap` key for the Plan icon | Verify at build. |
 | Flyout light dismiss | Verify at slice 5. Fallback: explicit close. |
+| 0.5.0 changes beyond the hub | Audit the 0.5.0 changelog before the hub work (10.1). |
 | ISO week math errors | Small helper, table tests. |
 | Interim import survives past slice 6 | INTERIM comments. Slice 6 removes them. |
 
-## 10. Status
+## 10. Slice 3b - Day hub inversion (paused)
 
-Slices 2 and 3 are implemented. All gates are green: builds clean, 24 browser tests, nine end-to-end scenarios. Slice 4 (week pivot), slice 5 (view chip), and the import preview (slice 6) are next.
+Metrino 0.5.0 shipped the hub API from the pre-validation, plus other changes. Work on this repo pauses for the bindings update. Resume order: bindings (10.1), then this slice, then slices 4 and 5.
+
+### 10.1 Prerequisite - Metrino.Ripple bindings for 0.5.0
+
+1. Update the metrino package reference to 0.5.0.
+2. Audit the 0.5.0 changelog for changes beyond the hub. Fix the affected bindings and code.
+3. Verify the new hub surface: `part` attributes, `selectedIndex`, `selectionchanged`, `scrollToSection`, `sections`, the `snap` attribute.
+4. Extend the bindings: register functions, `Html.metroHub`, `Html.metroHubSection`, and the new hub properties and events.
+
+### 10.2 Design
+
+- The pivot is the enclosing component. The strip row above the pivot is removed.
+- The Day pivot item holds one `metro-hub`. The hub holds seven `metro-hub-section` children: one date of the visible week each.
+- A section holds the content the old card view held: session card, rest line, or before-plan line.
+- The chevrons sit with the hub in the Day item. They scroll the hub to the selected day.
+- A hub pan settles on a day section. The app writes that date to `selectedDate`. The date block and plan line follow.
+- The hub subtree is keyed on the week of `selectedDate`, never on the date. A day change is a scroll; only a week rollover rebuilds.
+- The selected section header takes the accent color.
+- The Week pivot item keeps the slice 4 rows. Its chevrons move `selectedDate` seven days.
+
+### 10.3 Tasks
+
+1. Bindings update (10.1).
+2. Register hub and hub-section at boot.
+3. Replace `stripRow` with the hub inside the Day pivot item.
+4. Chevron handler scrolls the hub; the scroll listener writes `selectedDate`.
+5. Key the hub switch on the plan week. Style the selected header.
+6. Rework e2e scenarios 2, 5, and 6: section headers replace the strip letters; the chevron scrolls; a header tap selects the day.
+
+### 10.4 Acceptance
+
+- The pivot headers are the only always-visible day and week control.
+- The Week view shows no day navigation.
+- Chevron, pan, and header tap agree on one `selectedDate`.
+- The section 8 gates stay green.
+
+## 11. Status
+
+Slices 2 and 3 are implemented and committed (29c0570). Gates were green at commit: builds clean, 24 browser tests, nine end-to-end scenarios.
+
+Paused on 2026-09-20: metrino 0.5.0 is out. Next task: the Metrino.Ripple 0.5.0 bindings update (10.1). Then slice 3b (day hub inversion), then slices 4 and 5.
 
 Implementation notes:
 
