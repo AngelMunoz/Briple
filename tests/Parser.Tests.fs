@@ -1,7 +1,6 @@
 module Parser.Tests
 
-// Browser-lane tests for the plan format parser (see
-// docs/plan/parser-storage-implementation.md §3). The positive fixture is
+// Browser-lane tests for the plan format parser
 // the real 4-week plan file; negative fixtures are inline strings with
 // known line numbers.
 
@@ -18,11 +17,7 @@ type Fetch =
 
 let parse(text: string) = parsePlan text
 
-let hasWarning
-  (kind: WarningKind)
-  (line: int)
-  (warnings: ParseWarning list)
-  =
+let hasWarning (kind: WarningKind) (line: int) (warnings: ParseWarning list) =
   warnings
   |> List.exists(fun warning -> warning.Kind = kind && warning.Line = line)
 

@@ -2,7 +2,62 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MyApp</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      #root {
+        height: 100%;
+      }
+      /* metrino's metro-button hard-codes min-width: 120px for text labels;
+         the day strip needs compact controls, so it uses plain buttons
+         styled with the metrino tokens. */
+      .strip-day {
+        min-width: 34px;
+        min-height: 34px;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        padding: 2px 4px;
+        background: transparent;
+        color: var(--metro-foreground);
+        border: 1px solid var(--metro-foreground);
+        font-family: var(--metro-font-family);
+        font-size: var(--metro-font-size-small);
+        cursor: pointer;
+        transition: background var(--metro-transition-fast) var(--metro-easing);
+      }
+      .strip-day:hover {
+        background: var(--metro-highlight-hover);
+      }
+      .strip-day.selected {
+        background: var(--metro-accent);
+        border-color: var(--metro-accent);
+        color: #ffffff;
+      }
+      .strip-chevron {
+        min-width: 32px;
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        background: transparent;
+        color: var(--metro-foreground);
+        border: none;
+        cursor: pointer;
+      }
+      .strip-chevron:hover {
+        background: var(--metro-highlight-hover);
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

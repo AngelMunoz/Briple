@@ -98,7 +98,7 @@ type IconSize =
   | Normal
   | Medium
   | Large
-  | XLarge
+  | [<CompiledName "xlarge">] XLarge
 
 /// Tile sizing: `small` | `medium` | `wide` | `large`
 /// (cycle tile accepts medium/wide only).

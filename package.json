@@ -6,7 +6,8 @@
     "postinstall": "dotnet tool restore",
     "start": "dotnet fable watch src --run pnpm exec vite",
     "build": "dotnet fable src",
-    "test:browser": "dotnet fable tests/Briple.Tests.fsproj --noCache --sourceMaps && node tests/browser.mjs"
+    "test:browser": "dotnet fable tests/Briple.Tests.fsproj --noCache --sourceMaps && node tests/browser.mjs",
+    "test:e2e": "dotnet fable src && node tests/e2e.mjs"
   },
   "keywords": [],
   "author": "",

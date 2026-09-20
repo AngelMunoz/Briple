@@ -202,12 +202,9 @@ S2, import present:
 
 ### 5.8 Tests
 
-- ISO week and quarter helper.
-- Weekday narrow letters. Strip model: dates, letters, dot flags, selected flag.
-- Card model: counts, first two exercises, more count.
-- Interim import: parse fixture, commit, `getActiveImport` round trip.
-- String table: es and en lines.
-- Smoke: page boots, app bar renders, no page errors.
+- Interim import: parse fixture, commit, `getActiveImport` round trip through the store lane.
+- App behavior is covered end to end by `tests/e2e.mjs` (Playwright): boot, the S1 state, the sample and file-import flows, the toast, the plan week line with RIR, the session card fields, reload persistence, the rest-day line, day strip selection, menu navigation, browser back, and both locales.
+- The E2E clock is fixed on Monday 2026-09-14, the storyboard's example state, so every assertion is deterministic.
 
 ### 5.9 Acceptance
 
@@ -257,10 +254,10 @@ S2, import present:
 All green before the next slice:
 
 1. `dotnet build`: zero errors, zero warnings, src and tests.
-2. `pnpm test:browser`: the 18 existing asserts plus the new suites.
-3. `pnpm build`: exit 0.
-4. fantomas clean on touched files.
-5. Smoke: page boots, no page errors. From slice 3 on.
+2. `pnpm test:browser`: 24 tests green. Parser, store, and projection suites against the real fixture and real IndexedDB.
+3. `pnpm test:e2e`: nine end-to-end scenarios over the real app. Zero failures, zero page errors.
+4. `pnpm build`: exit 0.
+5. fantomas clean on touched files.
 
 ## 9. Risks
 
@@ -270,3 +267,13 @@ All green before the next slice:
 | Flyout light dismiss | Verify at slice 5. Fallback: explicit close. |
 | ISO week math errors | Small helper, table tests. |
 | Interim import survives past slice 6 | INTERIM comments. Slice 6 removes them. |
+
+## 10. Status
+
+Slices 2 and 3 are implemented. All gates are green: builds clean, 24 browser tests, nine end-to-end scenarios. Slice 4 (week pivot), slice 5 (view chip), and the import preview (slice 6) are next.
+
+Implementation notes:
+
+- `Metrino.Ripple/Primitives.fs`: the `showToast` / `hideToast` module imports were broken against metrino 0.4.0. The d.ts declares them; the built module exports only `MetroToast` and `registerMetroToast`. They are now typed helpers over the existing `MetroToast` element (`Elements.fs`) and reproduce the metrino source's own global-instance behavior.
+- `Fable.Browser.Navigator` was added for the typed `navigator.language` binding.
+- Fable drops `[<Emit>]` bindings that a `.fsi` file exposes. The Intl emits live in a nested module inside `Locale.fs`, and the public surface wraps them.

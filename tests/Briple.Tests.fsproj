@@ -7,16 +7,21 @@
 
   <ItemGroup>
     <!-- The sources under test, compiled directly into the test project so
-         the demo app (Program.fs, metrino) stays out of the test lane. -->
+         the app entry point (Program.fs, registrations, mount) stays out of
+         the test lane. App behavior (shell, Today, import flows) is covered
+         end to end in tests/e2e.mjs against the real app. -->
     <Compile Include="..\src\Plan\Types.fs" />
     <Compile Include="..\src\Plan\Parser.fsi" />
     <Compile Include="..\src\Plan\Parser.fs" />
+    <Compile Include="..\src\Plan\Projection.fsi" />
+    <Compile Include="..\src\Plan\Projection.fs" />
     <Compile Include="..\src\Store\Db.fsi" />
     <Compile Include="..\src\Store\Db.fs" />
     <Compile Include="QUnit.fsi" />
     <Compile Include="QUnit.fs" />
     <Compile Include="Parser.Tests.fs" />
     <Compile Include="Store.Tests.fs" />
+    <Compile Include="Projection.Tests.fs" />
   </ItemGroup>
 
   <ItemGroup>

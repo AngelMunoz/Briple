@@ -64,17 +64,22 @@ module Primitives =
   [<Import("registerMetroTooltip", "@angelmunoz/metrino/tooltip")>]
   let registerMetroTooltip: unit -> unit = jsNative
 
-  (*
-        Global toast API (`@angelmunoz/metrino/toast` module functions).
-    *)
+  (* Global toast API. metrino 0.4.0's toast.d.ts declares `showToast` /
+     `hideToast` module exports, but the built module only exports
+     `MetroToast` and `registerMetroToast` — importing the declared names
+     fails at module load. These helpers reproduce the source's own global
+     behavior (one lazily attached `metro-toast` instance) over the typed
+     element API. *)
 
-  /// Show a toast on the shared global `metro-toast` instance; returns its id.
-  [<Import("showToast", "@angelmunoz/metrino/toast")>]
-  let showToast: ToastOptions -> string = jsNative
+  /// The document's global `metro-toast` instance, attached on first use.
+  [<Emit("(document.querySelector('metro-toast') ?? document.body.appendChild(document.createElement('metro-toast')))")>]
+  let globalToast() : MetroToast = jsNative
 
-  /// Hide one toast by id on the shared global instance.
-  [<Import("hideToast", "@angelmunoz/metrino/toast")>]
-  let hideToast: string -> unit = jsNative
+  /// Show a toast on the global `metro-toast` instance; returns its id.
+  let showToast(options: ToastOptions) : string = (globalToast()).show(options)
+
+  /// Hide one toast by id on the global instance.
+  let hideToast(id: string) : unit = (globalToast()).hide(id)
 
   type Html with
 

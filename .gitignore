@@ -482,5 +482,6 @@ $RECYCLE.BIN/
 *.swp
 
 *.fs.js
+*.fs.js.map
 
 .zcode/

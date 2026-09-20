@@ -9,13 +9,24 @@
     <Compile Include="Plan\Types.fs" />
     <Compile Include="Plan\Parser.fsi" />
     <Compile Include="Plan\Parser.fs" />
+    <Compile Include="Plan\Projection.fsi" />
+    <Compile Include="Plan\Projection.fs" />
     <Compile Include="Store\Db.fsi" />
     <Compile Include="Store\Db.fs" />
+    <Compile Include="App\Locale.fsi" />
+    <Compile Include="App\Locale.fs" />
+    <Compile Include="App\State.fsi" />
+    <Compile Include="App\State.fs" />
+    <Compile Include="App\Today.fsi" />
+    <Compile Include="App\Today.fs" />
+    <Compile Include="App\Shell.fsi" />
+    <Compile Include="App\Shell.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Fable.Browser.IndexedDB" Version="2.2.0" />
+    <PackageReference Include="Fable.Browser.Navigator" Version="2.5.0" />
     <PackageReference Include="Fable.Promise" Version="3.2.1" />
     <PackageReference Include="Fable.Ripple" Version="1.0.0-beta.1" />
     <PackageReference Include="Fable.Ripple.Dom" Version="1.0.0-beta.1" />

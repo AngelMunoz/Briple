@@ -144,7 +144,7 @@ let dayTable =
   ]
 
 // Day names recognized by the es/en table; unknown names stay in the model
-// but the calendar projection skips them (design §7).
+// but the calendar projection skips them.
 let tryDayOfWeek(name: string) : DayOfWeek option =
   dayTable |> Map.tryFind(normalizeName name)
 

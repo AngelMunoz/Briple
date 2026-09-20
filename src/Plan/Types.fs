@@ -1,7 +1,7 @@
 module Plan.Types
 
 // Domain model of the training plan format, mirroring the file one-to-one
-// (see docs/design/training-pwa-storyboards.md §7). Reps/Rir/Descanso/Notas
+// Reps/Rir/Descanso/Notas
 // are stored verbatim from the file; "-" means "not present" for the UI.
 
 type Ejercicio = {

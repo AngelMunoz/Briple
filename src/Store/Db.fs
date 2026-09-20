@@ -1,6 +1,6 @@
 module Briple.Store
 
-// IndexedDB persistence for the training app (design §7). The
+// IndexedDB persistence for the training app. The
 // Fable.Browser.IndexedDB bindings are raw event-based types; this module
 // wraps them into promises, owns the schema migration, and maps every value
 // crossing the storage boundary through flat plain-JS DTOs — structured

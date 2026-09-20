@@ -2,7 +2,7 @@ module Store.Tests
 
 // Browser-lane tests for the IndexedDB store: these run against the real
 // Chromium IndexedDB via the Playwright harness (Mibo.Fable pattern). They
-// cover the migration, the DTO mapping round trip (§5.4), the two-store
+// cover the migration, the DTO mapping round trip, the two-store
 // transaction, and reconnection behavior.
 
 open Fable.Core
