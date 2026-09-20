@@ -35,7 +35,14 @@ val isValidView: plan: Plan -> genero: Genero -> opcionId: string -> bool
 /// First Genero's first Opcion in file order.
 val defaultView: plan: Plan -> Genero * string
 
-val init: stored: StoredImport option -> storedView: ViewState option -> unit
+/// Restores boot state. `storedDate` is the raw ISO selectedDate; a missing
+/// or corrupted value falls back to today. Also starts the change
+/// subscription that persists selectedDate.
+val init:
+  stored: StoredImport option ->
+  storedView: ViewState option ->
+  storedDate: string option ->
+    unit
 
 /// Hash router over the three pages; NewUrl pushes history, Jump -1 is back.
 val router: Fable.Ripple.Dom.Routing.HashRouter<Page>

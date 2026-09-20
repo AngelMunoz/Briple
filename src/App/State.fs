@@ -39,6 +39,10 @@ let pivotIndex: Var<float> = Var.create 0.0
 
 let importError: Var<string option> = Var.create None
 
+// Persistence subscription for selectedDate, created in `init` so its
+// immediate first run cannot clobber the restored value with today's date.
+let mutable private datePersist: IDisposable option = None
+
 // Shared metrino toast host. ToastHost registers its own <metro-toast>
 // element on the document body at the first `show`.
 let toastHost: ToastHost = ToastHost()
@@ -61,7 +65,22 @@ let defaultView(plan: Plan) : Genero * string =
     |> Option.map(fun opcion -> (bloque.Genero, opcion.Id)))
   |> Option.defaultValue(Hombre, "3dias")
 
-let init (stored: StoredImport option) (storedView: ViewState option) : unit =
+let init
+  (stored: StoredImport option)
+  (storedView: ViewState option)
+  (storedDate: string option)
+  : unit =
+  // Restore the date first, defensively: a corrupted store entry degrades
+  // to today instead of failing the boot.
+  selectedDate.Value <-
+    storedDate
+    |> Option.map(fun raw ->
+      try
+        Iso.toDateOnly raw
+      with _ ->
+        today())
+    |> Option.defaultValue(today())
+
   match stored with
   | None -> ()
   | Some import ->
@@ -82,6 +101,19 @@ let init (stored: StoredImport option) (storedView: ViewState option) : unit =
         |> Option.defaultWith(fun () -> defaultView plan)
 
       view.Value <- resolvedView
+
+  // Persist every later change. Var notifies only on real changes, so the
+  // immediate first run rewrites the value just read back - harmless.
+  match datePersist with
+  | Some subscription -> subscription.Dispose()
+  | None -> ()
+
+  datePersist <-
+    Some(
+      Signal.subscribe
+        (fun date -> setStateRaw "selectedDate" (Iso.ofDateOnly date) |> ignore)
+        selectedDate
+    )
 
 // --- Navigation (hub and spokes; system back where it exists) ---------------
 // Fable.Ripple's hash router connects the address bar to a signal: NewUrl

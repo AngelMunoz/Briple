@@ -22,7 +22,8 @@ registerMetroToast()
 promise {
   let! stored = Briple.Store.getActiveImport()
   let! storedView = Briple.Store.getViewState()
-  App.State.init stored storedView
+  let! storedDate = Briple.Store.getStateRaw "selectedDate"
+  App.State.init stored storedView storedDate
   Html.mount "root" (App.Shell.view())
 }
 |> Promise.start

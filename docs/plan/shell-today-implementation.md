@@ -321,6 +321,8 @@ Slice 3b (day hub inversion) is implemented in the working tree, not committed: 
 
 Criteria revision 2026-09-20: the Today card shows the full routine of the dia, flat (no "first two" truncation, no "+ N más" line). Mesociclo, circuit grouping, rests, and guía detail move to the session detail (slice 7). The card model, locale strings, and e2e scenario 2 reflect the revision.
 
+Slice 4 (week pivot) is implemented in the working tree, not committed: selectedDate persists through the raw state lane with a defensive boot parse; `weekRows` and `planChipState` landed in the projection with browser tests; the Week item renders the range header, chip row (chip, week chevrons, Hoy), seven plain rows, and the sessions summary; a row tap writes selectedDate and pivots to Day. External date writes go through `setSelectedDate`, which scrolls the day hub and marks the section when the week is unchanged. Gates re-ran green: builds clean, 27 browser tests, ten end-to-end scenarios. Slice 5 (view chip) is next.
+
 Implementation notes:
 
 - `Metrino.Ripple/Primitives.fs`: the `showToast` / `hideToast` module imports were broken against metrino 0.4.0. The d.ts declares them; the built module exports only `MetroToast` and `registerMetroToast`. They are now typed helpers over the existing `MetroToast` element (`Elements.fs`) and reproduce the metrino source's own global-instance behavior.

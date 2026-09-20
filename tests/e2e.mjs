@@ -129,7 +129,7 @@ await scenario('Import survives a reload through IndexedDB', 'es-ES', async (pag
 });
 
 // 5. Rest day: the chevron settles the hub on Tuesday and the quiet
-//    next-session line shows there (S2 note).
+//    next-session line shows there.
 await scenario('Rest day shows the quiet next-session line', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
     await see(page, 'Full Body A', 'session card before moving');
@@ -150,7 +150,7 @@ await scenario('Tapping a hub section selects its day', 'es-ES', async (page) =>
     await seeSelectedDay(page, 'lun', 'tap moved back to Monday');
 });
 
-// 7. Navigation: ⋯ menu reaches the Plan page, chevron returns (F1/F2b shell).
+// 7. Navigation: ⋯ menu reaches the Plan page, chevron returns.
 await scenario('App-bar menu navigates to Plan and back', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
     await see(page, 'Full Body A', 'Today rendered');
@@ -180,6 +180,26 @@ await scenario('Empty state localizes to en', 'en-US', async (page) => {
     await see(page, 'Load a plan', 'load button (en)');
     await page.getByText('Try the sample plan').click();
     await see(page, 'Full Body A', 'session card (en chrome, es content)');
+});
+
+// 10. Week pivot: range header, chip, rows, summary; a row tap returns to
+//     Day with that date selected and the hub gliding to it.
+await scenario('Week pivot: rows, summary, and row tap', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await see(page, 'Full Body A', 'Day rendered');
+    await page.getByRole('tab', { name: 'Week' }).click();
+    await see(page, 'SEPTIEMBRE', 'week range header');
+    await see(page, 'Hoy', 'today jump');
+    await see(page, 'descanso', 'rest rows');
+    await see(page, '3 sesiones esta semana', 'weekly summary');
+    // Monday is today in the fixed clock: it carries the accent bar.
+    await page.locator('.week-row.today').waitFor({ timeout: 8000 });
+    // Tap the Tuesday row: back to Day, hub on Tuesday.
+    await page.locator('.week-row').nth(1).click();
+    await see(page, 'martes', 'date block moved to Tuesday');
+    await page
+        .locator('metro-hub-section[selected][header="mar"]')
+        .waitFor({ timeout: 8000 });
 });
 
 await browser.close();

@@ -30,6 +30,11 @@ type Strings = {
   PlanDone: string
   ToastLoaded: int -> int -> string
   ExercisesBadge: int -> int -> string
+  StartsOn: string -> string
+  Hoy: string
+  SessionsSummary: int -> string
+  RestRow: string
+  ExerciseCount: int -> string
   PlanMenu: string
   SettingsMenu: string
   PagePlan: string
@@ -56,6 +61,11 @@ let esStrings = {
   ExercisesBadge =
     fun ejercicios circuitos ->
       $"{ejercicios} ejercicios · {circuitos} circuitos"
+  StartsOn = fun fecha -> $"Empieza el {fecha}"
+  Hoy = "Hoy"
+  SessionsSummary = fun sesiones -> $"{sesiones} sesiones esta semana"
+  RestRow = "descanso"
+  ExerciseCount = fun ejercicios -> $"{ejercicios} ej"
   PlanMenu = "Plan de entrenamiento"
   SettingsMenu = "Ajustes"
   PagePlan = "Plan"
@@ -79,6 +89,11 @@ let enStrings = {
     fun variants weeks -> $"Plan loaded · {variants} variants · {weeks} weeks"
   ExercisesBadge =
     fun exercises circuits -> $"{exercises} exercises · {circuits} circuits"
+  StartsOn = fun date -> $"Starts {date}"
+  Hoy = "Today"
+  SessionsSummary = fun sessions -> $"{sessions} sessions this week"
+  RestRow = "rest"
+  ExerciseCount = fun exercises -> $"{exercises} ex"
   PlanMenu = "Training plan"
   SettingsMenu = "Settings"
   PagePlan = "Plan"
@@ -112,6 +127,12 @@ module Intl =
   [<Emit("new Intl.DateTimeFormat($0, { weekday: 'short' }).format($1)")>]
   let weekdayShort(locale: string, date: DateTime) : string = jsNative
 
+  [<Emit("new Intl.DateTimeFormat($0, { day: 'numeric' }).format($1)")>]
+  let dayNumber(locale: string, date: DateTime) : string = jsNative
+
+  [<Emit("new Intl.DateTimeFormat($0, { month: 'long' }).format($1)")>]
+  let monthLong(locale: string, date: DateTime) : string = jsNative
+
   [<Emit("new Intl.DateTimeFormat($0, { day: 'numeric', month: 'long' }).format($1)")>]
   let dayMonth(locale: string, date: DateTime) : string = jsNative
 
@@ -123,6 +144,12 @@ let weekdayNarrow(locale: string, date: DateTime) : string =
 
 let weekdayShort(locale: string, date: DateTime) : string =
   Intl.weekdayShort(locale, date)
+
+let dayNumber(locale: string, date: DateTime) : string =
+  Intl.dayNumber(locale, date)
+
+let monthLong(locale: string, date: DateTime) : string =
+  Intl.monthLong(locale, date)
 
 let dayMonth(locale: string, date: DateTime) : string =
   Intl.dayMonth(locale, date)

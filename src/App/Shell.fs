@@ -20,7 +20,7 @@ let backHeader(title: string) =
         attr.size XLarge
         attr.style "margin-right:8px"
       ]
-      Html.div [ attr.className "title"; Html.text title ]
+      Html.span [ attr.className "title"; Html.text title ]
     ]
   ]
 

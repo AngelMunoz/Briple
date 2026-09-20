@@ -178,3 +178,51 @@ let defaultAnchor
     monday
   else
     addDays monday 7
+
+// --- Week rows and the plan chip --------------------------------------------
+
+/// One row of the visible week: the date, whether it is today, and the
+/// session projected for it. `Session = None` renders as a rest row.
+type WeekRow = {
+  Date: DateOnly
+  IsToday: bool
+  Session: Dia option
+}
+
+/// The seven dates of the week of `selected`, Monday first.
+let weekRows
+  (plan: Plan)
+  (genero: Genero)
+  (opcionId: string)
+  (anchor: DateOnly)
+  (today: DateOnly)
+  (selected: DateOnly)
+  : WeekRow list =
+  let monday = mondayOf selected
+
+  [
+    for offset in 0..6 ->
+      let date = addDays monday offset
+
+      {
+        Date = date
+        IsToday = sameDate date today
+        Session = trySession plan genero opcionId anchor date
+      }
+  ]
+
+/// Plan progress for a date: the week counter inside the plan, the start
+/// date before it, done after it. The UI renders all three quiet.
+type PlanChip =
+  | Inside of week: int * ofTotal: int
+  | StartsOn of DateOnly
+  | Completed
+
+let planChipState (plan: Plan) (anchor: DateOnly) (date: DateOnly) : PlanChip =
+  match planWeek plan anchor date with
+  | Some week -> Inside(week, plan.Semanas)
+  | None ->
+    if daysBetween anchor date < 0 then
+      StartsOn anchor
+    else
+      Completed

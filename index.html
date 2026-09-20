@@ -32,6 +32,30 @@
       .day-chevron:hover {
         background: var(--metro-highlight-hover);
       }
+      /* Week pivot rows: plain tap rows; the today row carries
+         the accent bar and a quiet highlight. */
+      .week-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 44px;
+        margin: 0 16px;
+        padding: 8px;
+        background: transparent;
+        color: var(--metro-foreground);
+        border: none;
+        cursor: pointer;
+        font-family: var(--metro-font-family);
+        text-align: left;
+        transition: background var(--metro-transition-fast) var(--metro-easing);
+      }
+      .week-row:hover {
+        background: var(--metro-highlight-hover);
+      }
+      .week-row.today {
+        box-shadow: inset 3px 0 0 var(--metro-accent);
+        background: var(--metro-highlight, rgba(128, 128, 128, 0.12));
+      }
       /* Day hub: one day per section. A section spans most of the container
          so the next day peeks at the edge, and the selected section's
          header takes the accent through the part attributes that

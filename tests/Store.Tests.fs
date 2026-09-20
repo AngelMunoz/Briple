@@ -6,6 +6,7 @@ module Store.Tests
 // transaction, and reconnection behavior.
 
 open Fable.Core
+open System
 open Browser.Types
 open Briple.Testing.QUnit
 open Briple.Store
@@ -138,6 +139,24 @@ QUnit.testAsync(
     assert'.ok(
       loaded |> Option.exists(fun s -> s.Id = "reopen"),
       "data survives a reconnect"
+    )
+  }
+)
+
+QUnit.testAsync(
+  "selectedDate round-trips through the raw state lane",
+  fun assert' -> promise {
+    do! setStateRaw "selectedDate" (Iso.ofDateOnly(DateOnly(2026, 9, 16)))
+    let! raw = getStateRaw "selectedDate"
+
+    assert'.equal(raw, Some "2026-09-16", "stored verbatim as ISO")
+
+    let restored = raw |> Option.map Iso.toDateOnly
+
+    assert'.equal(
+      restored |> Option.map Iso.ofDateOnly,
+      Some "2026-09-16",
+      "ISO maps back to the date"
     )
   }
 )

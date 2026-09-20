@@ -38,7 +38,8 @@ let schemeLine(exercise: Ejercicio) : string option =
   |> fun line -> if line = "" then None else Some line
 
 // The card shows the full routine of the dia, flat: every exercise with its
-// scheme. Mesociclo, circuit grouping, and guía detail live in slice 7.
+// scheme. Mesociclo, circuit grouping, and guía detail belong to the
+// session detail view.
 let cardModel
   (dia: Dia)
   (weekdayName: string)
@@ -258,6 +259,9 @@ type HubElement =
 
 let mutable dayHub: HubElement = Unchecked.defaultof<_>
 
+// The week the current hub was built for; set together with `dayHub`.
+let mutable dayHubWeek: DateOnly = Unchecked.defaultof<_>
+
 let dayIndexOf(weekStart: DateOnly) =
   daysBetween weekStart selectedDate.Value
 
@@ -269,6 +273,17 @@ let markSelectedSection(index: int) =
         section.setAttribute("selected", "")
       else
         section.removeAttribute("selected"))
+
+// Every selectedDate write from outside the hub goes through here. The hub
+// is keyed on the week, so a same-week change is a scroll plus a header
+// mark; a week change leaves the work to the rebuild's mount scroll.
+let setSelectedDate(date: DateOnly) : unit =
+  selectedDate.Value <- date
+
+  if not(isNull dayHub) && dayHubWeek = mondayOf date then
+    let index = daysBetween dayHubWeek date
+    dayHub.scrollToSection(float index, "smooth")
+    markSelectedSection index
 
 let chevronButton (direction: string) (step: int) =
   Html.button [
@@ -302,7 +317,7 @@ let daySection
          [])
     on.click(fun _ ->
       // Tap a peeking section to bring its day into view. Taps on the
-      // in-view section stay free for the session card (slice 7).
+      // in-view section stay free for the session card.
       if not(isNull dayHub) && int dayHub.selectedIndex <> index then
         dayHub.scrollToSection(float index, "smooth"))
     dayContent plan anchor viewValue date
@@ -330,6 +345,7 @@ let dayHubView
       attr.ref(fun el ->
         let hub = unbox<HubElement> el
         dayHub <- hub
+        dayHubWeek <- weekStart
         // Open on the selected day of the week; instant, once laid out.
         Dom.requestAnimationFrame(fun _ ->
           hub.scrollToSection(float(dayIndexOf weekStart), "auto")))
@@ -344,6 +360,144 @@ let dayHubView
     ]
   ]
 
+// --- Week pivot -------------------------------------------------------------
+
+// "14 – 20 SEPTEMBER"; the month is named once when both ends share it.
+let weekRangeText(weekStart: DateOnly) =
+  let weekEnd = addDays weekStart 6
+  let l = locale()
+  let d1 = dayNumber(l, toDateTime weekStart)
+  let d2 = dayNumber(l, toDateTime weekEnd)
+  let m1 = monthLong(l, toDateTime weekStart)
+  let m2 = monthLong(l, toDateTime weekEnd)
+
+  if m1 = m2 then
+    $"{d1} – {d2} {m1.ToUpper()}"
+  else
+    $"{d1} {m1.ToUpper()} – {d2} {m2.ToUpper()}"
+
+let weekChipText(date: DateOnly) =
+  match parsed.Value, activeImport.Value with
+  | Some parsedPlan, Some import ->
+    let s = strings()
+
+    match planChipState parsedPlan.Plan import.Anchor date with
+    | Inside(week, total) -> s.PlanWeek week total
+    | StartsOn start -> s.StartsOn(dayMonth(locale(), toDateTime start))
+    | Completed -> s.PlanDone
+  | _ -> ""
+
+let weekRowView(row: WeekRow) =
+  let s = strings()
+  let dt = toDateTime row.Date
+  let weekday = weekdayShort(locale(), dt)
+
+  let title, count =
+    match row.Session with
+    | Some dia ->
+      let fallback = weekdayLong(locale(), dt)
+      dia.Titulo |> Option.defaultValue fallback, Some dia.Ejercicios.Length
+    | None -> s.RestRow, None
+
+  Html.button [
+    attr.className(if row.IsToday then "week-row today" else "week-row")
+    on.click(fun _ ->
+      setSelectedDate row.Date
+      pivotIndex.Value <- 0.0)
+    Html.span [
+      attr.className "caption"
+      attr.style "opacity:0.7;width:24px;text-align:right"
+      Html.text(dayNumber(locale(), dt))
+    ]
+    Html.span [
+      attr.className "caption"
+      attr.style "opacity:0.7;width:36px;text-align:left"
+      Html.text weekday
+    ]
+    Html.span [
+      attr.className "body"
+      attr.style(
+        if row.Session.IsSome then
+          "flex:1;text-align:left"
+        else
+          "flex:1;text-align:left;opacity:0.55"
+      )
+      Html.text(if row.Session.IsSome then title else $"· {title}")
+    ]
+    yield!
+      match count with
+      | Some n -> [
+          Html.span [
+            attr.className "caption"
+            attr.style "opacity:0.6"
+            Html.text(s.ExerciseCount n)
+          ]
+        ]
+      | None -> []
+  ]
+
+// Keyed on the week like the day hub: the chip, rows, and summary are
+// week-scoped, so day changes within the week never rebuild them.
+let weekView
+  (plan: Plan option)
+  (anchor: DateOnly option)
+  (viewValue: Genero * string)
+  (weekStart: DateOnly)
+  =
+  plan
+  |> Option.bind(fun plan ->
+    match anchor with
+    | Some anchor -> Some(plan, anchor)
+    | None -> None)
+  |> Option.map(fun (plan, anchor) ->
+    let genero, opcionId = viewValue
+    let s = strings()
+    let rows = weekRows plan genero opcionId anchor (today()) weekStart
+
+    let sessions =
+      rows |> List.sumBy(fun row -> if row.Session.IsSome then 1 else 0)
+
+    Html.div [
+      attr.style "display:flex;flex-direction:column"
+      Html.div [
+        attr.className "header"
+        attr.style "padding:8px 16px 0"
+        Html.text(weekRangeText weekStart)
+      ]
+      Html.div [
+        attr.style "display:flex;align-items:center;gap:8px;padding:8px 16px"
+        Html.span [
+          attr.className "caption"
+          attr.style "opacity:0.6"
+          Html.text(weekChipText weekStart)
+        ]
+        Html.span [ attr.style "flex:1" ]
+        Html.button [
+          attr.className "day-chevron"
+          on.click(fun _ -> setSelectedDate(addDays selectedDate.Value -7))
+          Html.metroIcon [ attr.icon "back" ]
+        ]
+        Html.button [
+          attr.className "day-chevron"
+          on.click(fun _ -> setSelectedDate(addDays selectedDate.Value 7))
+          Html.metroIcon [ attr.icon "forward" ]
+        ]
+        Html.button [
+          attr.className "day-chevron"
+          attr.style "min-width:auto;padding:0 8px"
+          on.click(fun _ -> setSelectedDate(today()))
+          Html.span [ attr.className "caption"; Html.text s.Hoy ]
+        ]
+      ]
+      yield! rows |> List.map weekRowView
+      Html.div [
+        attr.className "caption"
+        attr.style "opacity:0.6;padding:12px 16px"
+        Html.text(s.SessionsSummary sessions)
+      ]
+    ])
+  |> Option.defaultValue Html.none
+
 let pivot() =
   Html.metroPivot [
     attr.selectedIndex pivotIndex
@@ -353,21 +507,25 @@ let pivot() =
       attr.header "Day"
       Html.switchWith(
         (fun () ->
-          (parsed.Value |> Option.map(fun parsedPlan -> parsedPlan.Plan),
-           activeImport.Value |> Option.map(fun import -> import.Anchor),
-           view.Value,
-           mondayOf selectedDate.Value)),
+          parsed.Value |> Option.map(fun parsedPlan -> parsedPlan.Plan),
+          activeImport.Value |> Option.map(fun import -> import.Anchor),
+          view.Value,
+          mondayOf selectedDate.Value),
         fun (plan, anchor, viewValue, weekStart) ->
           dayHubView plan anchor viewValue weekStart
       )
     ]
     Html.metroPivotItem [
       attr.header "Week"
-      Html.p [
-        attr.className "body"
-        attr.style "opacity:0.5;padding:16px"
-        Html.text "…"
-      ]
+      Html.switchWith(
+        (fun () ->
+          parsed.Value |> Option.map(fun parsedPlan -> parsedPlan.Plan),
+          activeImport.Value |> Option.map(fun import -> import.Anchor),
+          view.Value,
+          mondayOf selectedDate.Value),
+        fun (plan, anchor, viewValue, weekStart) ->
+          weekView plan anchor viewValue weekStart
+      )
     ]
   ]
 

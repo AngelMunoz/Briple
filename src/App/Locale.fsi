@@ -23,6 +23,11 @@ type Strings = {
   PlanDone: string
   ToastLoaded: int -> int -> string
   ExercisesBadge: int -> int -> string
+  StartsOn: string -> string
+  Hoy: string
+  SessionsSummary: int -> string
+  RestRow: string
+  ExerciseCount: int -> string
   PlanMenu: string
   SettingsMenu: string
   PagePlan: string
@@ -48,6 +53,10 @@ val weekdayLong: locale: string * date: DateTime -> string
 val weekdayNarrow: locale: string * date: DateTime -> string
 
 val weekdayShort: locale: string * date: DateTime -> string
+
+val dayNumber: locale: string * date: DateTime -> string
+
+val monthLong: locale: string * date: DateTime -> string
 
 val dayMonth: locale: string * date: DateTime -> string
 

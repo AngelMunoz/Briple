@@ -280,3 +280,69 @@ QUnit.test(
     assert'.equal(tryMesocicloRir p 3, None, "no Semana 3 header")
     assert'.equal(tryMesocicloRir p 4, None, "no mesociclo for week 4")
 )
+
+QUnit.testAsync(
+  "weekRows: seven rows, three sessions, four rest, today bar",
+  fun assert' -> promise {
+    let! text = Fetch.text "./fixtures/plan_entrenamiento_4sem.txt"
+
+    match parsePlan text with
+    | Error error -> assert'.ok(false, $"parse error at line {error.Line}")
+    | Ok parsed ->
+      let rows =
+        weekRows
+          parsed.Plan
+          Hombre
+          "3dias"
+          anchor
+          (DateOnly(2026, 9, 16))
+          (DateOnly(2026, 9, 14))
+
+      assert'.equal(rows.Length, 7, "seven rows")
+
+      assert'.ok(
+        rows.[0].Date = DateOnly(2026, 9, 14),
+        "first row is the Monday"
+      )
+
+      let sessionRows = rows |> List.filter(fun row -> row.Session.IsSome)
+      assert'.equal(sessionRows.Length, 3, "three sessions in week 2")
+      assert'.equal(rows.Length - sessionRows.Length, 4, "four rest rows")
+
+      assert'.ok(rows.[2].IsToday, "Wednesday carries the today bar")
+      assert'.notOk(rows.[1].IsToday, "Tuesday is not today")
+      assert'.ok(rows.[1].Session.IsNone, "Tuesday projects as rest")
+
+      match sessionRows.[0].Session with
+      | None -> assert'.ok(false, "Monday row carries a dia")
+      | Some dia ->
+        assert'.equal(dia.Titulo, Some "Full Body A", "Monday title")
+  }
+)
+
+QUnit.testAsync(
+  "planChipState: before, inside, after",
+  fun assert' -> promise {
+    let! text = Fetch.text "./fixtures/plan_entrenamiento_4sem.txt"
+
+    match parsePlan text with
+    | Error error -> assert'.ok(false, $"parse error at line {error.Line}")
+    | Ok parsed ->
+      let p = parsed.Plan
+
+      assert'.ok(
+        planChipState p anchor (DateOnly(2026, 9, 6)) = StartsOn anchor,
+        "before the plan names the start date"
+      )
+
+      assert'.ok(
+        planChipState p anchor (DateOnly(2026, 9, 14)) = Inside(2, 4),
+        "inside reads week 2 of 4"
+      )
+
+      assert'.ok(
+        planChipState p anchor (DateOnly(2026, 10, 5)) = Completed,
+        "after the plan is done"
+      )
+  }
+)

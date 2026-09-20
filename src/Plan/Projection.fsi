@@ -67,3 +67,30 @@ val defaultAnchor:
   opcionId: string ->
   today: DateOnly ->
     DateOnly
+
+/// One row of the visible week: the date, whether it is today, and the
+/// session projected for it. `Session = None` renders as a rest row.
+type WeekRow = {
+  Date: DateOnly
+  IsToday: bool
+  Session: Dia option
+}
+
+/// The seven dates of the week of `selected`, Monday first.
+val weekRows:
+  plan: Plan ->
+  genero: Genero ->
+  opcionId: string ->
+  anchor: DateOnly ->
+  today: DateOnly ->
+  selected: DateOnly ->
+    WeekRow list
+
+/// Plan progress for a date: the week counter inside the plan, the start
+/// date before it, done after it.
+type PlanChip =
+  | Inside of week: int * ofTotal: int
+  | StartsOn of DateOnly
+  | Completed
+
+val planChipState: plan: Plan -> anchor: DateOnly -> date: DateOnly -> PlanChip
