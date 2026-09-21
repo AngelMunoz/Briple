@@ -9,6 +9,7 @@ jobs:
     permissions:
       contents: read
       deployments: write
+      packages: read
     name: Deploy to Cloudflare Pages
     steps:
       - uses: actions/checkout@v4
