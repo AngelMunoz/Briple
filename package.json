@@ -29,7 +29,7 @@
     "qunit": "2.26.0",
     "vite": "8.3.0",
     "vite-plugin-pwa": "1.3.0",
-    "wrangler": "^4.135.0"
+    "wrangler": "4.135.0"
   },
   "dependencies": {
     "@angelmunoz/metrino": "0.5.2",
