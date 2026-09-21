@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-21
+
 ### Added
 
 - **Shell:** the app is installable and works offline: a service worker caches the app shell after the first visit, a web app manifest names it for the home screen, and updates download in the background and apply on the next launch.
