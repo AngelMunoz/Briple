@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Shell:** the app is installable and works offline: a service worker caches the app shell after the first visit, a web app manifest names it for the home screen, and updates download in the background and apply on the next launch.
 - **Session detail:** a command on the Today app bar that opens the selected day's routine as a plan: the plan week with its RIR target, circuit groups with their round counts and the A1/A2 exercise order, exercise notes, and the guide's rest and circuit-rule lines; back returns to Today.
 - **Settings:** theme (system, light, or dark) and accent color pickers that restyle the app instantly; the choices are remembered on the device.
 - **Settings:** a reset command, behind a confirmation, that restores the default theme and accent and clears every plan and setting stored on the device.

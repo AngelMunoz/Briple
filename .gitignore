@@ -484,4 +484,7 @@ $RECYCLE.BIN/
 *.fs.js
 *.fs.js.map
 
+# Vite production build output
+dist/
+
 .zcode/

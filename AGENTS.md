@@ -20,7 +20,8 @@ Briple is a local-first training PWA: F# compiled to JS with Fable, Metro UI web
 **DO NOT GO OFF RAILS**: you must use the package.json commands, do not use npx, pnpx or any unauthorized code for project management.
 
 - `pnpm start` - Fable watch of `src` + Vite dev server.
-- `pnpm build` - `dotnet fable src` only. It emits `*.fs.js`; it does not bundle.
+- `pnpm build` - `dotnet fable src` then `vite build`. Fable emits `*.fs.js`; Vite bundles them with the PWA service worker and manifest into `dist/`.
+- `pnpm preview` - serves `dist/` for checking the production build (offline support included).
 - `pnpm test:browser` - Fable-compiles `tests/Briple.Tests.fsproj` with `--noCache`, then runs the QUnit suite in headless Chromium (Playwright). There is no Node test runner; the harness auto-imports every `tests/*Tests.fs.js`.
 - `pnpm test:e2e` - recompiles `src`, then runs the Playwright scenarios against the real app. `page.clock.install` pins the browser clock, so assertions are deterministic.
 - `dotnet build` - builds the solution; the repo gate requires zero errors and zero warnings.
