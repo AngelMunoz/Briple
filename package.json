@@ -1,6 +1,6 @@
 {
   "name": "briple",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sample Fable.Ripple app",
   "scripts": {
     "postinstall": "dotnet tool restore",
