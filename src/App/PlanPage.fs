@@ -5,7 +5,6 @@ module App.PlanPage
 // view() only composes them.
 
 open System
-open Fable.Core
 open Fable.Ripple
 open Fable.Ripple.Dom
 open Metrino.Ripple
@@ -16,12 +15,6 @@ open App.Locale
 open App.Variants
 open App.Chrome
 open App.State
-
-// The raw emit lives in a nested module the signature file does not
-// declare: Fable drops [<Emit>] bindings that a signature file exposes.
-module Dom =
-  [<Emit("(() => { const blob = new Blob([$1], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = $0; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); })()")>]
-  let downloadText (name: string) (text: string) : unit = jsNative
 
 let mutable fileInput: HTMLInputElement = Unchecked.defaultof<_>
 
@@ -187,27 +180,6 @@ let inline importsSection(currentId: string) : DomItem =
     )
   ]
 
-let inline appBar() : DomItem =
-  let s = strings()
-
-  Html.metroAppBar [
-    Html.metroAppBarButton [
-      attr.custom("slot", "menu")
-      attr.icon "download"
-      attr.label s.ExportMenu
-      on.click(fun _ ->
-        activeImport.Value
-        |> Option.iter(fun import ->
-          Dom.downloadText import.FileName import.Raw))
-    ]
-    Html.metroAppBarButton [
-      attr.custom("slot", "menu")
-      attr.icon "delete"
-      attr.label s.RemoveMenu
-      on.click(fun _ -> removePlan())
-    ]
-  ]
-
 let inline content() : DomItem =
   match parsed.Value, activeImport.Value with
   | Some parsedPlan, Some active ->
@@ -234,15 +206,10 @@ let inline emptyPlan() : DomItem =
 
 let view() : DomItem =
   Html.div [
-    attr.style "display:flex;flex-direction:column;height:100%"
     backHeader (strings()).PagePlan
-    Html.div [
-      attr.style "flex:1 1 auto;min-height:0;overflow-y:auto"
-      Html.show((fun () -> parsed.Value.IsNone), fun () -> emptyPlan())
-      Html.show(
-        (fun () -> parsed.Value.IsSome && activeImport.Value.IsSome),
-        fun () -> content()
-      )
-    ]
-    appBar()
+    Html.show((fun () -> parsed.Value.IsNone), fun () -> emptyPlan())
+    Html.show(
+      (fun () -> parsed.Value.IsSome && activeImport.Value.IsSome),
+      fun () -> content()
+    )
   ]

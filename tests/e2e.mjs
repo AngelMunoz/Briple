@@ -394,6 +394,38 @@ await scenario('Re-anchor from the Plan page re-projects', 'es-ES', async (page)
     await see(page, 'El plan aún no empieza.', 'today sits before the new anchor');
 });
 
+// 17. The fixed app bar must not cover a page's last content: on Plan, the
+//     imports history row stays above the bar's top edge at maximum scroll.
+await scenario('Plan imports clear the fixed app bar', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await page.getByRole('button', { name: 'More options' }).click();
+    await page.getByText('Plan de entrenamiento').click();
+    await page.waitForURL(/#\/plan/, { timeout: 8000 });
+    await see(page, 'Imports', 'imports heading');
+    await see(page, 'plan_entrenamiento_4sem.txt', 'imports history row');
+    // Scroll the row's scrollable ancestor to the end.
+    await page.evaluate(() => {
+        const row = [...document.querySelectorAll('.week-row')].find((el) =>
+            el.textContent.includes('plan_entrenamiento_4sem.txt'),
+        );
+        let el = row?.parentElement;
+        while (el && el.scrollHeight <= el.clientHeight) el = el.parentElement;
+        if (el) el.scrollTop = el.scrollHeight;
+    });
+    const bar = await page.locator('metro-app-bar').boundingBox();
+    const row = await page
+        .getByText('plan_entrenamiento_4sem.txt')
+        .filter({ visible: true })
+        .first()
+        .boundingBox();
+    if (row.y + row.height > bar.y + 1) {
+        throw new Error(
+            `imports row bottom (${Math.round(row.y + row.height)}) overlaps the app bar top (${Math.round(bar.y)})`,
+        );
+    }
+});
+
 await browser.close();
 await server.close();
 

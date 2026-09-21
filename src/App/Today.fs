@@ -2,8 +2,8 @@ module App.Today
 
 // Today screen: date block, empty state with the import paths, and the
 // Day pivot. The pivot is the enclosing component; its Day item holds the
-// day hub - one section per day of the week - and its chevrons. The app bar
-// holds commands only: its ⋯ menu reaches the Plan and Settings pages.
+// day hub - one section per day of the week - and its chevrons. The shell
+// owns the app bar.
 
 
 open System
@@ -168,12 +168,21 @@ let inline planLine() =
   ]
 
 // --- View chip -----------------------------------------------------------
-// The chip is the only place Genero/Opcion appear on Today. The flyout sits
-// in the layout right below the chip: the component is position:fixed with
-// no insets, so with `open` it renders at its static spot under the chip.
-// `open` is the only mechanism: no show() call, no positioning ref.
+// The chip is the only place Genero/Opcion appear on Today. The flyout is
+// imperative in metrino 0.5.2: `open` is a read-only getter, so the chip
+// calls `show()` on the captured element with itself as the anchor. The
+// backdrop and light dismiss belong to the component.
 
-let flyoutOpen: Var<bool> = Var.create false
+let mutable viewChipButton: HTMLElement = Unchecked.defaultof<_>
+let mutable viewMenu: MetroMenuFlyout = Unchecked.defaultof<_>
+
+let openViewMenu() =
+  if not(isNull viewMenu) && not(isNull viewChipButton) then
+    viewMenu.show viewChipButton
+
+let hideViewMenu() =
+  if not(isNull viewMenu) then
+    viewMenu.hide()
 
 let chipText() =
   let genero, opcionId = view.Value
@@ -184,7 +193,8 @@ let inline viewChip() =
   Html.metroButton [
     attr.className "view-chip"
     attr.style "min-height:34px;color:var(--metro-accent)"
-    on.click(fun _ -> flyoutOpen.Value <- true)
+    attr.ref(fun el -> viewChipButton <- el)
+    on.click(fun _ -> openViewMenu())
     Html.span [ attr.className "badge-text"; Html.text chipText ]
     Html.metroIcon [ attr.icon "chevron-down" ]
   ]
@@ -194,15 +204,9 @@ let inline flyoutItem (genero: Genero) (item: VariantItem) =
 
   Html.div [
     attr.className "menu-item"
-    // Positioned above the component's fixed backdrop: upstream paints the
-    // backdrop over the static menu container, which swallows item clicks.
-    attr.style(fun () ->
-      if isActive() then
-        "position:relative;color:var(--metro-accent)"
-      else
-        "position:relative")
+    attr.style(fun () -> if isActive() then "color:var(--metro-accent)" else "")
     on.click(fun _ ->
-      flyoutOpen.Value <- false
+      hideViewMenu()
       setView genero item.Id |> ignore)
     Html.show(isActive, fun () -> Html.metroIcon [ attr.icon "check" ])
     Html.span [ Html.text item.Label ]
@@ -235,8 +239,7 @@ let inline viewFlyout() =
         Html.div [ attr.className "menu-divider" ] :: header :: items)
 
   Html.metroMenuFlyout [
-    attr.open' flyoutOpen
-    on.close(fun _ -> flyoutOpen.Value <- false)
+    attr.ref(fun el -> viewMenu <- el :?> MetroMenuFlyout)
     yield! rows
   ]
 
@@ -605,39 +608,18 @@ let inline pivot() =
     ]
   ]
 
-let inline appBar() =
-  Html.metroAppBar [
-    Html.metroAppBarButton [
-      attr.custom("slot", "menu")
-      attr.icon "calendar"
-      attr.label (strings()).PlanMenu
-      on.click(fun _ -> goTo PlanPage)
-    ]
-    Html.metroAppBarButton [
-      attr.custom("slot", "menu")
-      attr.icon "settings"
-      attr.label (strings()).SettingsMenu
-      on.click(fun _ -> goTo SettingsPage)
-    ]
-  ]
-
 let view() =
   Html.div [
-    attr.style "display:flex;flex-direction:column;height:100%"
-    Html.div [
-      attr.style "flex:1 1 auto;min-height:0;overflow-y:auto"
-      dateBlock()
-      Html.show((fun () -> activeImport.Value.IsNone), emptyState)
-      Html.show(
-        (fun () -> activeImport.Value.IsSome),
-        fun () ->
-          Html.div [
-            attr.style "display:flex;flex-direction:column;gap:8px"
-            planLine()
-            viewChipArea()
-            pivot()
-          ]
-      )
-    ]
-    appBar()
+    dateBlock()
+    Html.show((fun () -> activeImport.Value.IsNone), emptyState)
+    Html.show(
+      (fun () -> activeImport.Value.IsSome),
+      fun () ->
+        Html.div [
+          attr.style "display:flex;flex-direction:column;gap:8px"
+          planLine()
+          viewChipArea()
+          pivot()
+        ]
+    )
   ]

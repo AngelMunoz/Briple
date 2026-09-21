@@ -88,11 +88,10 @@ let view() : DomItem =
     let anchor = Var.create staged.Anchor
 
     Html.div [
-      attr.style "display:flex;flex-direction:column;height:100%"
       backHeader (strings()).PreviewTitle
       Html.div [
         attr.style
-          "flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:0 16px 16px"
+          "display:flex;flex-direction:column;gap:12px;padding:0 16px 16px"
         metaLine staged.FileName
         planTitle plan
         yield! factGroups plan

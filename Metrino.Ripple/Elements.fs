@@ -95,6 +95,7 @@ type MetroContextMenu =
 type MetroMenuFlyout =
   inherit HTMLElement
   abstract show: target: Element * ?x: float * ?y: float -> unit
+  abstract hide: unit -> unit
 
 /// `metro-tooltip`.
 [<AllowNullLiteral>]
