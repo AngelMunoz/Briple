@@ -18,20 +18,17 @@ open App.State
 
 let mutable fileInput: HTMLInputElement = Unchecked.defaultof<_>
 
-let inline titleBlock(plan: Plan) : DomItem list =
-  let s = strings()
-
-  [
-    Html.div [
-      attr.className "title"
-      Html.text $"{plan.Titulo} · {s.WeeksCount plan.Semanas}"
-    ]
-    Html.div [
-      attr.className "caption"
-      attr.style "opacity:0.6"
-      Html.text $"origen: {plan.Origen}"
-    ]
+let inline titleBlock (s: Strings) (plan: Plan) : DomItem list = [
+  Html.div [
+    attr.className "title"
+    Html.text $"{plan.Titulo} · {s.WeeksCount plan.Semanas}"
   ]
+  Html.div [
+    attr.className "caption"
+    attr.style "opacity:0.6"
+    Html.text $"origen: {plan.Origen}"
+  ]
+]
 
 /// The row's right caption: the label minus its display form ("3 días — X"
 /// shows "X"); a label without the separator shows nothing.
@@ -40,11 +37,7 @@ let inline rowTitle(label: string) : string =
   | -1 -> ""
   | index -> label.Substring(index + 3)
 
-let inline variantRow
-  (s: Strings)
-  (genero: Genero)
-  (item: VariantItem)
-  : DomItem =
+let variantRow (s: Strings) (genero: Genero) (item: VariantItem) : DomItem =
   let isActive() = view.Value = (genero, item.Id)
 
   Html.button [
@@ -66,34 +59,31 @@ let inline variantRow
     ]
   ]
 
-let inline variantList(plan: Plan) : DomItem list =
-  let s = strings()
+let inline variantList (s: Strings) (plan: Plan) : DomItem list = [
+  heading s.VariantsHeading
+  yield!
+    groups plan s.DiasUnit
+    |> List.collect(fun group ->
+      group.Items |> List.map(fun item -> variantRow s group.Genero item))
+]
 
-  [
-    heading s.VariantsHeading
-    yield!
-      groups plan s.DiasUnit
-      |> List.collect(fun group ->
-        group.Items |> List.map(fun item -> variantRow s group.Genero item))
-  ]
-
-let inline anchorRow(active: StoredImport) : DomItem list =
+let anchorRow (s: Strings) (active: StoredImport) : DomItem list =
   let anchor = Var.create active.Anchor
 
   [
     Html.div [
       attr.className "caption"
       attr.style "opacity:0.6"
-      Html.text (strings()).AnchorLabel
+      Html.text s.AnchorLabel
     ]
     anchorField anchor reAnchor
   ]
 
-let inline loadFile() : DomItem list = [
+let inline loadFile(s: Strings) : DomItem list = [
   Html.metroButton [
     attr.style "margin-top:8px"
     on.click(fun _ -> fileInput.click())
-    Html.text (strings()).LoadPlan
+    Html.text s.LoadPlan
   ]
   Html.input [
     attr.custom("type", "file")
@@ -109,8 +99,8 @@ let inline loadFile() : DomItem list = [
   ]
 ]
 
-let inline guideSection(plan: Plan) : DomItem list = [
-  heading (strings()).GuiaHeading
+let inline guideSection (s: Strings) (plan: Plan) : DomItem list = [
+  heading s.GuiaHeading
   yield!
     plan.Extras
     |> List.map extraKey
@@ -129,18 +119,22 @@ let inline guideSection(plan: Plan) : DomItem list = [
       ])
 ]
 
-let historyStamp(importedAt: string) : string =
+let historyStamp (s: Strings) (importedAt: string) : string =
   try
     let day = Iso.toDateOnly importedAt.[0..9]
 
     if day = today() then
-      (strings()).Hoy
+      s.Hoy
     else
       dayMonth(locale(), toDateTime day)
   with _ ->
     ""
 
-let inline historyRow (currentId: string) (import: StoredImport) : DomItem =
+let inline historyRow
+  (s: Strings)
+  (currentId: string)
+  (import: StoredImport)
+  : DomItem =
   let isCurrent = import.Id = currentId
 
   Html.button [
@@ -156,11 +150,11 @@ let inline historyRow (currentId: string) (import: StoredImport) : DomItem =
     Html.span [
       attr.className "caption"
       attr.style "opacity:0.6"
-      Html.text(historyStamp import.ImportedAt)
+      Html.text(historyStamp s import.ImportedAt)
     ]
   ]
 
-let inline importsSection(currentId: string) : DomItem =
+let importsSection (s: Strings) (currentId: string) : DomItem =
   let history: Var<StoredImport list> = Var.create []
 
   listImports()
@@ -169,18 +163,18 @@ let inline importsSection(currentId: string) : DomItem =
 
   Html.div [
     attr.style "display:flex;flex-direction:column"
-    heading (strings()).ImportsHeading
+    heading s.ImportsHeading
     Html.switchWith(
       (fun () -> history.Value),
       fun imports ->
         Html.div [
           attr.style "display:flex;flex-direction:column"
-          yield! imports |> List.map(fun import -> historyRow currentId import)
+          yield! imports |> List.map(historyRow s currentId)
         ]
     )
   ]
 
-let inline content() : DomItem =
+let inline content(s: Strings) : DomItem =
   match parsed.Value, activeImport.Value with
   | Some parsedPlan, Some active ->
     let plan = parsedPlan.Plan
@@ -188,28 +182,30 @@ let inline content() : DomItem =
     Html.div [
       attr.style
         "display:flex;flex-direction:column;gap:12px;padding:0 16px 16px"
-      yield! titleBlock plan
-      yield! variantList plan
-      yield! anchorRow active
-      yield! loadFile()
-      yield! guideSection plan
-      importsSection active.Id
+      yield! titleBlock s plan
+      yield! variantList s plan
+      yield! anchorRow s active
+      yield! loadFile s
+      yield! guideSection s plan
+      importsSection s active.Id
     ]
   | _ -> Html.none
 
-let inline emptyPlan() : DomItem =
+let inline emptyPlan(s: Strings) : DomItem =
   Html.p [
     attr.className "body"
     attr.style "opacity:0.5;padding:0 16px"
-    Html.text (strings()).EmptyBody
+    Html.text s.EmptyBody
   ]
 
 let view() : DomItem =
+  let s = strings()
+
   Html.div [
-    backHeader (strings()).PagePlan
-    Html.show((fun () -> parsed.Value.IsNone), fun () -> emptyPlan())
+    backHeader s.PagePlan
+    Html.show((fun () -> parsed.Value.IsNone), fun () -> emptyPlan s)
     Html.show(
       (fun () -> parsed.Value.IsSome && activeImport.Value.IsSome),
-      fun () -> content()
+      fun () -> content s
     )
   ]

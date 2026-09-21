@@ -22,9 +22,7 @@ let inline metaLine(fileName: string) : DomItem =
     Html.text $"{fileName} · ✓"
   ]
 
-let inline planTitle(plan: Plan) : DomItem =
-  let s = strings()
-
+let inline planTitle (s: Strings) (plan: Plan) : DomItem =
   Html.div [
     attr.className "header"
     Html.text $"{plan.Titulo} · {s.WeeksCount plan.Semanas}"
@@ -37,34 +35,27 @@ let inline factRow(label: string) : DomItem =
     Html.text label
   ]
 
-let inline factGroups(plan: Plan) : DomItem list =
-  let s = strings()
-
+let inline factGroups (s: Strings) (plan: Plan) : DomItem list =
   groups plan s.DiasUnit
   |> List.collect(fun group -> [
     heading(s.GeneroWord group.Genero)
     yield! group.Items |> List.map(fun item -> factRow item.Label)
   ])
 
-let inline startDecision(anchor: Var<DateOnly>) : DomItem list =
-  let s = strings()
-
-  [
-    heading s.StartHeading
-    Html.div [
-      attr.style "display:flex;align-items:center;gap:8px"
-      Html.span [
-        attr.className "body"
-        attr.style "opacity:0.6"
-        Html.text s.StartsLabel
-      ]
-      anchorField anchor ignore
+let inline startDecision (s: Strings) (anchor: Var<DateOnly>) : DomItem list = [
+  heading s.StartHeading
+  Html.div [
+    attr.style "display:flex;align-items:center;gap:8px"
+    Html.span [
+      attr.className "body"
+      attr.style "opacity:0.6"
+      Html.text s.StartsLabel
     ]
+    anchorField anchor ignore
   ]
+]
 
-let inline actions(anchor: Var<DateOnly>) : DomItem =
-  let s = strings()
-
+let inline actions (s: Strings) (anchor: Var<DateOnly>) : DomItem =
   Html.div [
     attr.style "display:flex;gap:8px;margin-top:8px"
     Html.metroButton [
@@ -86,29 +77,30 @@ let view() : DomItem =
     let plan = staged.Parsed.Plan
     let warnings = staged.Parsed.Warnings
     let anchor = Var.create staged.Anchor
+    let s = strings()
 
     Html.div [
-      backHeader (strings()).PreviewTitle
+      backHeader s.PreviewTitle
       Html.div [
         attr.style
           "display:flex;flex-direction:column;gap:12px;padding:0 16px 16px"
         metaLine staged.FileName
-        planTitle plan
-        yield! factGroups plan
+        planTitle s plan
+        yield! factGroups s plan
         Html.div [
           attr.style
             "height:1px;margin:8px 0;background:currentColor;opacity:0.15"
         ]
-        yield! startDecision anchor
+        yield! startDecision s anchor
         Html.show(
           (fun () -> not warnings.IsEmpty),
           fun () ->
             noticeCard
-              (strings().WarningsLine warnings.Length)
+              (s.WarningsLine warnings.Length)
               (warnings
                |> List.map(fun warning ->
-                 (strings()).WarningLine warning.Message warning.Line))
+                 s.WarningLine warning.Message warning.Line))
         )
-        actions anchor
+        actions s anchor
       ]
     ]

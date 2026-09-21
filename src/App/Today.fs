@@ -67,13 +67,13 @@ let cardModel
 
 let mutable fileInput: HTMLInputElement = Unchecked.defaultof<_>
 
-let firstFile(input: HTMLInputElement) : File option =
+let inline firstFile(input: HTMLInputElement) : File option =
   if input.files.length > 0 then
     Some input.files.[0]
   else
     None
 
-let inline dateBlock() =
+let dateBlock(s: Strings) =
   Html.div [
     attr.style "padding:16px 16px 0"
     Html.div [
@@ -92,25 +92,25 @@ let inline dateBlock() =
       attr.style "opacity:0.6"
       Html.text(fun () ->
         let (_, week) = isoWeek selectedDate.Value
-        (strings()).WeekQuarter week (quarter selectedDate.Value))
+        s.WeekQuarter week (quarter selectedDate.Value))
     ]
     Html.div [
       attr.style "height:1px;margin:16px;background:currentColor;opacity:0.15"
     ]
   ]
 
-let inline emptyState() =
+let emptyState(s: Strings) =
   Html.div [
     attr.style "padding:16px;display:flex;flex-direction:column;gap:12px"
     Html.p [
       attr.className "body"
       attr.style "margin:0"
-      Html.text (strings()).EmptyTitle
+      Html.text s.EmptyTitle
     ]
     Html.p [
       attr.className "body"
       attr.style "opacity:0.6;margin:0"
-      Html.text (strings()).EmptyBody
+      Html.text s.EmptyBody
     ]
     Html.input [
       attr.custom("type", "file")
@@ -127,26 +127,25 @@ let inline emptyState() =
     ]
     Html.metroButton [
       on.click(fun _ -> fileInput.click())
-      Html.text (strings()).LoadPlan
+      Html.text s.LoadPlan
     ]
     Html.metroButton [
       on.click(fun _ -> importSample() |> ignore)
-      Html.text (strings()).TrySample
+      Html.text s.TrySample
     ]
     Html.show(
       (fun () -> importError.Value.IsSome),
       fun () ->
-        Chrome.noticeCard (strings()).ImportFailed [
+        Chrome.noticeCard s.ImportFailed [
           importError.Value |> Option.defaultValue ""
         ]
     )
   ]
 
-let planLineText() =
+let planLineText(s: Strings) =
   match parsed.Value, activeImport.Value with
   | Some parsedPlan, Some import ->
     let plan = parsedPlan.Plan
-    let s = strings()
 
     match planWeek plan import.Anchor selectedDate.Value with
     | Some week ->
@@ -160,11 +159,11 @@ let planLineText() =
         s.PlanDone
   | _ -> ""
 
-let inline planLine() =
+let inline planLine(s: Strings) =
   Html.div [
     attr.className "body"
     attr.style "opacity:0.6;padding:0 16px"
-    Html.text planLineText
+    Html.text(planLineText s)
   ]
 
 // --- View chip -----------------------------------------------------------
@@ -176,26 +175,25 @@ let inline planLine() =
 let mutable viewChipButton: HTMLElement = Unchecked.defaultof<_>
 let mutable viewMenu: MetroMenuFlyout = Unchecked.defaultof<_>
 
-let openViewMenu() =
+let inline openViewMenu() =
   if not(isNull viewMenu) && not(isNull viewChipButton) then
     viewMenu.show viewChipButton
 
-let hideViewMenu() =
+let inline hideViewMenu() =
   if not(isNull viewMenu) then
     viewMenu.hide()
 
-let chipText() =
+let inline chipText(s: Strings) =
   let genero, opcionId = view.Value
-  let s = strings()
   $"{s.GeneroWord genero} · {Variants.display s.DiasUnit opcionId}"
 
-let inline viewChip() =
+let inline viewChip(s: Strings) =
   Html.metroButton [
     attr.className "view-chip"
     attr.style "min-height:34px;color:var(--metro-accent)"
     attr.ref(fun el -> viewChipButton <- el)
     on.click(fun _ -> openViewMenu())
-    Html.span [ attr.className "badge-text"; Html.text chipText ]
+    Html.span [ attr.className "badge-text"; Html.text(chipText s) ]
     Html.metroIcon [ attr.icon "chevron-down" ]
   ]
 
@@ -212,9 +210,7 @@ let inline flyoutItem (genero: Genero) (item: VariantItem) =
     Html.span [ Html.text item.Label ]
   ]
 
-let inline viewFlyout() =
-  let s = strings()
-
+let inline viewFlyout(s: Strings) =
   let blocks =
     match parsed.Value with
     | Some parsedPlan -> Variants.groups parsedPlan.Plan s.DiasUnit
@@ -243,16 +239,15 @@ let inline viewFlyout() =
     yield! rows
   ]
 
-let inline viewChipArea() =
+let inline viewChipArea(s: Strings) =
   Html.div [
     attr.style
       "display:flex;flex-direction:column;align-items:flex-start;padding:0 16px"
-    viewChip()
-    viewFlyout()
+    viewChip s
+    viewFlyout s
   ]
 
-let inline cardView (date: DateOnly) (dia: Dia) =
-  let s = strings()
+let inline cardView (s: Strings) (date: DateOnly) (dia: Dia) =
   let weekday = weekdayLong(locale(), toDateTime date)
   let model = cardModel dia weekday s.ExercisesBadge
 
@@ -273,15 +268,15 @@ let inline cardView (date: DateOnly) (dia: Dia) =
           attr.style "margin-top:10px"
           Html.div [ attr.className "body"; Html.text exercise.Name ]
           yield!
-            (match exercise.Scheme with
-             | Some scheme -> [
-                 Html.div [
-                   attr.className "caption"
-                   attr.style "opacity:0.65"
-                   Html.text scheme
-                 ]
-               ]
-             | None -> [])
+            match exercise.Scheme with
+            | Some scheme -> [
+                Html.div [
+                  attr.className "caption"
+                  attr.style "opacity:0.65"
+                  Html.text scheme
+                ]
+              ]
+            | None -> []
         ]
       ])
   ]
@@ -294,6 +289,7 @@ let inline quietLine(text: string) =
   ]
 
 let inline dayContent
+  (s: Strings)
   (plan: Plan option)
   (anchor: DateOnly option)
   (viewValue: Genero * string)
@@ -302,10 +298,9 @@ let inline dayContent
   match plan, anchor with
   | Some plan, Some anchor ->
     let (genero, opcionId) = viewValue
-    let s = strings()
 
     match trySession plan genero opcionId anchor date with
-    | Some dia -> cardView date dia
+    | Some dia -> cardView s date dia
     | None ->
       if daysBetween anchor date < 0 then
         quietLine s.BeforePlan
@@ -356,7 +351,7 @@ let markSelectedSection(index: int) =
 // Every selectedDate write from outside the hub goes through here. The hub
 // is keyed on the week, so a same-week change is a scroll plus a header
 // mark; a week change leaves the work to the rebuild's mount scroll.
-let setSelectedDate(date: DateOnly) : unit =
+let inline setSelectedDate(date: DateOnly) : unit =
   selectedDate.Value <- date
 
   if not(isNull dayHub) && dayHubWeek = mondayOf date then
@@ -381,6 +376,7 @@ let inline chevronButton (direction: string) (step: int) =
   ]
 
 let inline daySection
+  (s: Strings)
   (plan: Plan option)
   (anchor: DateOnly option)
   (viewValue: Genero * string)
@@ -390,21 +386,22 @@ let inline daySection
   Html.metroHubSection [
     attr.header(weekdayShort(locale(), toDateTime date))
     yield!
-      (if index = dayIndexOf weekStart then
-         [ attr.custom("selected", "") ]
-       else
-         [])
+      if index = dayIndexOf weekStart then
+        [ attr.custom("selected", "") ]
+      else
+        []
     on.click(fun _ ->
       // Tap a peeking section to bring its day into view. Taps on the
       // in-view section stay free for the session card.
       if not(isNull dayHub) && int dayHub.selectedIndex <> index then
         dayHub.scrollToSection(float index, "smooth"))
-    dayContent plan anchor viewValue date
+    dayContent s plan anchor viewValue date
   ]
 
 // The hub subtree is keyed on the week of the selected date, never on the
 // date itself: a day change is a scroll, only a week rollover rebuilds.
 let inline dayHubView
+  (s: Strings)
   (plan: Plan option)
   (anchor: DateOnly option)
   (viewValue: Genero * string)
@@ -435,7 +432,7 @@ let inline dayHubView
         dates
         |> List.indexed
         |> List.map(fun (index, date) ->
-          daySection plan anchor viewValue weekStart (index, date))
+          daySection s plan anchor viewValue weekStart (index, date))
     ]
   ]
 
@@ -455,19 +452,16 @@ let weekRangeText(weekStart: DateOnly) =
   else
     $"{d1} {m1.ToUpper()} – {d2} {m2.ToUpper()}"
 
-let weekChipText(date: DateOnly) =
+let weekChipText (s: Strings) (date: DateOnly) =
   match parsed.Value, activeImport.Value with
   | Some parsedPlan, Some import ->
-    let s = strings()
-
     match planChipState parsedPlan.Plan import.Anchor date with
     | Inside(week, total) -> s.PlanWeek week total
     | StartsOn start -> s.StartsOn(dayMonth(locale(), toDateTime start))
     | Completed -> s.PlanDone
   | _ -> ""
 
-let inline weekRowView(row: WeekRow) =
-  let s = strings()
+let weekRowView (s: Strings) (row: WeekRow) =
   let dt = toDateTime row.Date
   let weekday = weekdayShort(locale(), dt)
 
@@ -518,6 +512,7 @@ let inline weekRowView(row: WeekRow) =
 // Keyed on the week like the day hub: the chip, rows, and summary are
 // week-scoped, so day changes within the week never rebuild them.
 let inline weekView
+  (s: Strings)
   (plan: Plan option)
   (anchor: DateOnly option)
   (viewValue: Genero * string)
@@ -530,7 +525,6 @@ let inline weekView
     | None -> None)
   |> Option.map(fun (plan, anchor) ->
     let genero, opcionId = viewValue
-    let s = strings()
     let rows = weekRows plan genero opcionId anchor (today()) weekStart
 
     let sessions =
@@ -548,7 +542,7 @@ let inline weekView
         Html.span [
           attr.className "caption"
           attr.style "opacity:0.6"
-          Html.text(weekChipText weekStart)
+          Html.text(weekChipText s weekStart)
         ]
         Html.span [ attr.style "flex:1" ]
         Html.button [
@@ -568,7 +562,7 @@ let inline weekView
           Html.span [ attr.className "caption"; Html.text s.Hoy ]
         ]
       ]
-      yield! rows |> List.map(fun row -> weekRowView row)
+      yield! rows |> List.map(weekRowView s)
       Html.div [
         attr.className "caption"
         attr.style "opacity:0.6;padding:12px 16px"
@@ -577,7 +571,7 @@ let inline weekView
     ])
   |> Option.defaultValue Html.none
 
-let inline pivot() =
+let inline pivot(s: Strings) =
   Html.metroPivot [
     attr.selectedIndex pivotIndex
     on.pivotSelectionChanged(fun detail ->
@@ -591,7 +585,7 @@ let inline pivot() =
           view.Value,
           mondayOf selectedDate.Value),
         fun (plan, anchor, viewValue, weekStart) ->
-          dayHubView plan anchor viewValue weekStart
+          dayHubView s plan anchor viewValue weekStart
       )
     ]
     Html.metroPivotItem [
@@ -603,23 +597,25 @@ let inline pivot() =
           view.Value,
           mondayOf selectedDate.Value),
         fun (plan, anchor, viewValue, weekStart) ->
-          weekView plan anchor viewValue weekStart
+          weekView s plan anchor viewValue weekStart
       )
     ]
   ]
 
 let view() =
+  let s = strings()
+
   Html.div [
-    dateBlock()
-    Html.show((fun () -> activeImport.Value.IsNone), emptyState)
+    dateBlock s
+    Html.show((fun () -> activeImport.Value.IsNone), fun () -> emptyState s)
     Html.show(
       (fun () -> activeImport.Value.IsSome),
       fun () ->
         Html.div [
           attr.style "display:flex;flex-direction:column;gap:8px"
-          planLine()
-          viewChipArea()
-          pivot()
+          planLine s
+          viewChipArea s
+          pivot s
         ]
     )
   ]
