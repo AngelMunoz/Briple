@@ -38,6 +38,12 @@ let ActiveKey = "activeImportId"
 [<Literal>]
 let ViewStateKey = "viewState"
 
+[<Literal>]
+let ThemeKey = "theme"
+
+[<Literal>]
+let AccentKey = "accent"
+
 // ISO yyyy-MM-dd encoding for the storage boundary. The app-side domain uses
 // System.DateOnly (runtime confirmed present in fable-library-js 5.17).
 module Iso =
@@ -306,9 +312,36 @@ let setStateRaw (key: string) (value: string) : JS.Promise<unit> =
       tx.oncomplete <- fun _ -> resolve()
       tx.onerror <- fun _ -> reject(exn(describe tx.error))))
 
+/// Removes the state entry under `key`; deleting an absent key is not an
+/// error. Defaults persist as absence: the reset path deletes, never writes.
+let deleteStateRaw(key: string) : JS.Promise<unit> =
+  withConnection(fun db ->
+    Promise.create(fun resolve reject ->
+      let tx = db.transaction([| StateStore |], IDBTransactionMode.Readwrite)
+      tx.objectStore(StateStore).delete(box key) |> ignore
+      tx.oncomplete <- fun _ -> resolve()
+      tx.onerror <- fun _ -> reject(exn(describe tx.error))))
+
 let getViewState() : JS.Promise<ViewState option> =
   getStateRaw ViewStateKey
   |> Promise.bind(fun json -> Promise.lift(json |> Option.bind viewStateOfJson))
 
 let setViewState(view: ViewState) : JS.Promise<unit> =
   setStateRaw ViewStateKey (viewStateToJson view)
+
+/// Empties both stores in one transaction. Both clear requests are issued
+/// synchronously before anything is awaited, so the auto-commit cannot
+/// split them.
+let clearAllData() : JS.Promise<unit> =
+  withConnection(fun db ->
+    Promise.create(fun resolve reject ->
+      let tx =
+        db.transaction(
+          [| ImportsStore; StateStore |],
+          IDBTransactionMode.Readwrite
+        )
+
+      tx.objectStore(ImportsStore).clear() |> ignore
+      tx.objectStore(StateStore).clear() |> ignore
+      tx.oncomplete <- fun _ -> resolve()
+      tx.onerror <- fun _ -> reject(exn(describe tx.error))))

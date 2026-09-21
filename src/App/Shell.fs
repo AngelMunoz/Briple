@@ -54,30 +54,30 @@ let private bindAppBar(el: HTMLElement) =
     Dom.observeResize appBarObserver el
     measureAppBar()
 
-let todayBar() =
+let todayBar(s: Strings) =
   Html.metroAppBar [
     attr.ref(fun el -> bindAppBar el)
     Html.metroAppBarButton [
       attr.custom("slot", "menu")
       attr.icon "calendar"
-      attr.label (strings()).PlanMenu
+      attr.label s.PlanMenu
       on.click(fun _ -> goTo PlanPage)
     ]
     Html.metroAppBarButton [
       attr.custom("slot", "menu")
       attr.icon "settings"
-      attr.label (strings()).SettingsMenu
+      attr.label s.SettingsMenu
       on.click(fun _ -> goTo SettingsPage)
     ]
   ]
 
-let planBar() =
+let planBar(s: Strings) =
   Html.metroAppBar [
     attr.ref(fun el -> bindAppBar el)
     Html.metroAppBarButton [
       attr.custom("slot", "menu")
       attr.icon "download"
-      attr.label (strings()).ExportMenu
+      attr.label s.ExportMenu
       on.click(fun _ ->
         activeImport.Value
         |> Option.iter(fun import ->
@@ -86,37 +86,29 @@ let planBar() =
     Html.metroAppBarButton [
       attr.custom("slot", "menu")
       attr.icon "delete"
-      attr.label (strings()).RemoveMenu
+      attr.label s.RemoveMenu
       on.click(fun _ -> removePlan())
     ]
   ]
 
-let appBar() =
+let appBar(s: Strings) =
   Html.switch router.CurrentRoute (function
-    | Some PlanPage -> planBar()
+    | Some PlanPage -> planBar s
     | Some SettingsPage
     | Some ImportPage -> Html.none
-    | _ -> todayBar())
+    | _ -> todayBar s)
 
-// The import preview and the Settings placeholder have no bar; their content
-// uses the whole viewport.
-let private routeHasAppBar() =
+// The import preview and the Settings page have no bar; their content uses
+// the whole viewport.
+let routeHasAppBar() =
   match router.CurrentRoute.Value with
   | Some SettingsPage
   | Some ImportPage -> false
   | _ -> true
 
-let settingsPage() =
-  Html.div [
-    backHeader(strings().PageSettings)
-    Html.p [
-      attr.className "body"
-      attr.style "opacity:0.5;padding:0 16px"
-      Html.text "…"
-    ]
-  ]
-
 let view() =
+  let s = strings()
+
   Html.div [
     attr.style "display:flex;flex-direction:column;height:100%"
     Html.div [
@@ -128,9 +120,9 @@ let view() =
       Html.switch router.CurrentRoute (function
         | Some PlanPage -> App.PlanPage.view()
         | Some ImportPage -> App.Preview.view()
-        | Some SettingsPage -> settingsPage()
+        | Some SettingsPage -> App.SettingsPage.view()
         // Today is the hub; an unparsed URL degrades to it too.
         | _ -> App.Today.view())
     ]
-    appBar()
+    appBar s
   ]

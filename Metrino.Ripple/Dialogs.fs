@@ -24,6 +24,13 @@ module Dialogs =
   [<Import("registerMetroMessageDialog", "@angelmunoz/metrino/message-dialog")>]
   let registerMetroMessageDialog: unit -> unit = jsNative
 
+  /// Dynamic-import variant of `registerMetroMessageDialog`: the component
+  /// loads in its own chunk instead of the entry bundle. Resolves when the
+  /// custom element is registered. The emit is the arrow itself: the call
+  /// site invokes it.
+  [<Emit("() => import('@angelmunoz/metrino/message-dialog').then((m) => m.registerMetroMessageDialog())")>]
+  let registerMetroMessageDialogDynamic: unit -> JS.Promise<unit> = jsNative
+
   /// Register `metro-settings-flyout` (root export - no dedicated subpath).
   [<Import("registerMetroSettingsFlyout", "@angelmunoz/metrino")>]
   let registerMetroSettingsFlyout: unit -> unit = jsNative

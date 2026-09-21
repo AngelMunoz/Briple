@@ -70,6 +70,32 @@
       metro-hub-section[selected]::part(section-header) {
         color: var(--metro-accent);
       }
+      /* Settings: the accent swatch grid. Swatches are plain buttons (the
+         library has no swatch surface), one tile per Metro accent; the
+         selected tile gains a foreground outline like the metrino demo's
+         picker. */
+      .accent-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        max-width: 340px;
+      }
+      .accent-swatch {
+        width: 100%;
+        aspect-ratio: 1;
+        min-width: 0;
+        padding: 0;
+        border: none;
+        cursor: pointer;
+        transition: transform var(--metro-transition-fast) var(--metro-easing);
+      }
+      .accent-swatch:hover {
+        transform: scale(1.08);
+      }
+      .accent-swatch.selected {
+        outline: 2px solid var(--metro-foreground);
+        outline-offset: 2px;
+      }
     </style>
   </head>
   <body>

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Settings:** theme (system, light, or dark) and accent color pickers that restyle the app instantly; the choices are remembered on the device.
+- **Settings:** a reset command, behind a confirmation, that restores the default theme and accent and clears every plan and setting stored on the device.
+- **Settings:** an install-app placeholder, disabled until install support arrives.
+
 ## [0.1.0] - 2026-09-20
 
 First release: import a training plan file and browse it as a calendar. Everything runs on the device; no account or server is involved.

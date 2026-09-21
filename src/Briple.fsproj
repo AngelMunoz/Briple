@@ -13,6 +13,8 @@
     <Compile Include="Plan\Projection.fs" />
     <Compile Include="Store\Db.fsi" />
     <Compile Include="Store\Db.fs" />
+    <Compile Include="App\Theme.fsi" />
+    <Compile Include="App\Theme.fs" />
     <Compile Include="App\Locale.fsi" />
     <Compile Include="App\Locale.fs" />
     <Compile Include="App\Variants.fsi" />
@@ -27,6 +29,8 @@
     <Compile Include="App\PlanPage.fs" />
     <Compile Include="App\Today.fsi" />
     <Compile Include="App\Today.fs" />
+    <Compile Include="App\SettingsPage.fsi" />
+    <Compile Include="App\SettingsPage.fs" />
     <Compile Include="App\Shell.fsi" />
     <Compile Include="App\Shell.fs" />
     <Compile Include="Program.fs" />

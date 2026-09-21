@@ -17,6 +17,7 @@ open Plan.Parser
 open Plan.Projection
 open Briple.Store
 open App.Locale
+open App.Theme
 open App.Variants
 
 type Page =
@@ -55,6 +56,10 @@ let pendingImport: Var<StagedImport option> = Var.create None
 // Persistence subscription for selectedDate, created in `init` so its
 // immediate first run cannot clobber the restored value with today's date.
 let mutable datePersist: IDisposable option = None
+
+// The state-lane key of the selected date. The boot read in Program.fs uses
+// the same literal.
+let selectedDateKey = "selectedDate"
 
 // Shared metrino toast host. ToastHost registers its own <metro-toast>
 // element on the document body at the first `show`.
@@ -112,8 +117,10 @@ let init
         let genero, opcionId = resolvedView
         setViewState { Genero = genero; OpcionId = opcionId } |> Promise.start
 
-  // Persist every later change. Var notifies only on real changes, so the
-  // immediate first run rewrites the value just read back - harmless.
+  // Persist every later change. Today persists as absence (the boot
+  // fallback is today, so a default date never needs a record); Var
+  // notifies only on real changes, so the immediate first run either
+  // deletes a lane that was not there or rewrites the value just read.
   match datePersist with
   | Some subscription -> subscription.Dispose()
   | None -> ()
@@ -121,7 +128,11 @@ let init
   datePersist <-
     Some(
       Signal.subscribe
-        (fun date -> setStateRaw "selectedDate" (Iso.ofDateOnly date) |> ignore)
+        (fun date ->
+          if date = today() then
+            deleteStateRaw selectedDateKey |> ignore
+          else
+            setStateRaw selectedDateKey (Iso.ofDateOnly date) |> ignore)
         selectedDate
     )
 
@@ -301,3 +312,35 @@ let importFile(file: File) : JS.Promise<unit> = promise {
   let! text = file.text()
   stageImport file.name text
 }
+
+// --- Reset ------------------------------------------------------------------
+// The settings reset restores the theme defaults and wipes the store: every
+// import and every state lane. Every lane persists its default as absence
+// (theme, accent, and the date), so nothing is written back into the store
+// after the clear, and the next boot reads a fresh install.
+
+let resetToDefaults() : unit =
+  Theme.setTheme SystemTheme
+  Theme.setAccent Blue
+  activeImport.Value <- None
+  parsed.Value <- None
+  pendingImport.Value <- None
+  importError.Value <- None
+  view.Value <- (Hombre, "3dias")
+  selectedDate.Value <- today()
+
+  promise {
+    do! clearAllData()
+
+    toastHost.show {
+      title = None
+      message = strings().ToastReset
+      severity = Some Metrino.Ripple.Success
+      duration = Some 4000.0
+    }
+    |> ignore
+
+    goTo TodayPage
+  }
+  |> Promise.catch(fun err -> importError.Value <- Some(string err))
+  |> Promise.start

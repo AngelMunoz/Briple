@@ -92,6 +92,32 @@ async function seeSelectedDay(page, header, note) {
     }
 }
 
+// The state lane under `key` must hold `value` before the scenario moves on:
+// the attribute a control mirrors and the store write ride the same render,
+// but the transaction commits a beat later, and a reload or a reset issued
+// in between would race it.
+function storedLane(page, key, value) {
+    return page.waitForFunction(
+        async ({ key, value }) => {
+            const db = await new Promise((resolve, reject) => {
+                const req = indexedDB.open('briple-training', 1);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+            const stored = await new Promise((resolve, reject) => {
+                const tx = db.transaction('state', 'readonly');
+                const req = tx.objectStore('state').get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+                tx.oncomplete = () => db.close();
+            });
+            return stored === value;
+        },
+        { key, value },
+        { timeout: 8000 },
+    );
+}
+
 // 1. First run with no plan: the empty state.
 await scenario('first run shows the empty state (es)', 'es-ES', async (page) => {
     await see(page, 'Tu calendario está vacío.', 'empty title');
@@ -424,6 +450,99 @@ await scenario('Plan imports clear the fixed app bar', 'es-ES', async (page) => 
             `imports row bottom (${Math.round(row.y + row.height)}) overlaps the app bar top (${Math.round(bar.y)})`,
         );
     }
+});
+
+// 18. Settings: the theme choice applies to the document, is stored, and
+//     survives a reload. System is the default: no override attributes
+//     exist until the user picks one.
+await scenario('Settings theme and accent apply and persist', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await page.getByRole('button', { name: 'More options' }).click();
+    await page.getByText('Ajustes').click();
+    await page.waitForURL(/#\/settings/, { timeout: 8000 });
+    await see(page, 'Color de énfasis', 'accent heading');
+    const themeless = await page.evaluate(
+        () => !document.documentElement.hasAttribute('data-theme'),
+    );
+    if (!themeless) throw new Error('expected no data-theme attribute by default');
+    await page.locator('metro-radio-button[value="dark"] .radio').click();
+    await page.waitForFunction(
+        () => document.documentElement.getAttribute('data-theme') === 'dark',
+        { timeout: 8000 },
+    );
+    await page.getByRole('button', { name: 'Rojo' }).click();
+    await page.waitForFunction(
+        () => document.documentElement.getAttribute('accent') === 'red',
+        { timeout: 8000 },
+    );
+    // Both choices are on the store before the reload reads them back.
+    await storedLane(page, 'theme', 'dark');
+    await storedLane(page, 'accent', 'red');
+    await page.reload();
+    // Settings has no app bar (the shell renders none there); the accent
+    // heading proves the app booted back onto the page.
+    await see(page, 'Color de énfasis', 'settings page after reload');
+    await page.waitForFunction(
+        () =>
+            document.documentElement.getAttribute('data-theme') === 'dark' &&
+            document.documentElement.getAttribute('accent') === 'red',
+        { timeout: 8000 },
+    );
+});
+
+// 19. Reset: the confirm dialog's accept restores the default theme and
+//     accent, empties the store (imports and state lanes), and lands on
+//     Today's empty state.
+await scenario('Reset to defaults clears settings and data', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await see(page, 'Full Body A', 'imported before reset');
+    await page.getByRole('button', { name: 'More options' }).click();
+    await page.getByText('Ajustes').click();
+    await page.waitForURL(/#\/settings/, { timeout: 8000 });
+    // Give the reset something to clear: pick dark first, and let the
+    // store absorb the choice before the wipe races it.
+    await page.locator('metro-radio-button[value="dark"] .radio').click();
+    await page.waitForFunction(
+        () => document.documentElement.getAttribute('data-theme') === 'dark',
+        { timeout: 8000 },
+    );
+    await storedLane(page, 'theme', 'dark');
+    await page.getByText('Restablecer valores predeterminados').click();
+    await page
+        .locator('metro-message-dialog')
+        .filter({ hasText: 'Se borrarán' })
+        .waitFor({ state: 'attached', timeout: 8000 });
+    await page
+        .locator('metro-message-dialog metro-button')
+        .filter({ hasText: 'Restablecer' })
+        .click();
+    await see(page, 'Tu calendario está vacío.', 'back on the empty state');
+    await see(page, 'Ajustes restablecidos', 'reset toast');
+    await page.waitForFunction(
+        () =>
+            !document.documentElement.hasAttribute('data-theme') &&
+            !document.documentElement.hasAttribute('accent'),
+        { timeout: 8000 },
+    );
+    const cleared = await page.waitForFunction(async () => {
+        const db = await new Promise((resolve, reject) => {
+            const req = indexedDB.open('briple-training', 1);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+        const total = await new Promise((resolve, reject) => {
+            const tx = db.transaction(['imports', 'state'], 'readonly');
+            const imports = tx.objectStore('imports').count();
+            const state = tx.objectStore('state').count();
+            tx.oncomplete = () => resolve(imports.result + state.result);
+            tx.onerror = () => reject(tx.error);
+        });
+        db.close();
+        return total === 0;
+    }, { timeout: 8000 });
+    if (!cleared) throw new Error('expected the store to be empty after reset');
 });
 
 await browser.close();

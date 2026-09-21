@@ -56,6 +56,13 @@ module Inputs =
   [<Import("registerMetroToggleSwitch", "@angelmunoz/metrino/toggle-switch")>]
   let registerMetroToggleSwitch: unit -> unit = jsNative
 
+  /// Dynamic-import variant of `registerMetroRadioButton`: the component
+  /// loads in its own chunk instead of the entry bundle. Resolves when the
+  /// custom element is registered. The emit is the arrow itself: the call
+  /// site invokes it.
+  [<Emit("() => import('@angelmunoz/metrino/radio-button').then((m) => m.registerMetroRadioButton())")>]
+  let registerMetroRadioButtonDynamic: unit -> JS.Promise<unit> = jsNative
+
   type Html with
 
     static member inline metroAutoSuggestBox(args: DomItem list) : DomItem =
@@ -130,6 +137,16 @@ module Inputs =
 
     static member inline on(s: WithGetValueBool<'s>) : DomItem =
       Base.bindBooleanAttribute "on" s.get_Value
+
+    /// Checked state (radio button) as the reflected boolean attribute. The
+    /// attribute form on purpose: a radio registered through the dynamic
+    /// import can still be un-upgraded at first render, and a pre-upgrade
+    /// property write would shadow the component's accessor for good.
+    static member inline radioChecked(v: bool) : DomItem =
+      Base.booleanAttribute "checked" v
+
+    static member inline radioChecked(f: unit -> bool) : DomItem =
+      Base.bindBooleanAttribute "checked" f
 
   (* value: string -> base `attr.value`; value: number -> base `attr.value`;
        readonly -> base `attr.readOnly`; label/name/placeholder/required/disabled

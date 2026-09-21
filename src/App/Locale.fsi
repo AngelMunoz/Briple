@@ -6,6 +6,7 @@ module App.Locale
 
 open System
 open Plan.Types
+open App.Theme
 
 type Lang =
   | Es
@@ -51,6 +52,22 @@ type Strings = {
   ImportsHeading: string
   ExportMenu: string
   RemoveMenu: string
+  ThemeHeading: string
+  ThemeSystem: string
+  ThemeLight: string
+  ThemeDark: string
+  AccentHeading: string
+  AccentName: Accent -> string
+  ResetHeading: string
+  ResetBody: string
+  ResetToDefaults: string
+  ResetConfirmTitle: string
+  ResetConfirmBody: string
+  ResetConfirmAccept: string
+  InstallHeading: string
+  InstallBody: string
+  InstallApp: string
+  ToastReset: string
 }
 
 val esStrings: Strings

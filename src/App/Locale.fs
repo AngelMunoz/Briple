@@ -8,6 +8,7 @@ open System
 open Browser
 open Fable.Core
 open Plan.Types
+open App.Theme
 
 type Lang =
   | Es
@@ -58,6 +59,22 @@ type Strings = {
   ImportsHeading: string
   ExportMenu: string
   RemoveMenu: string
+  ThemeHeading: string
+  ThemeSystem: string
+  ThemeLight: string
+  ThemeDark: string
+  AccentHeading: string
+  AccentName: Accent -> string
+  ResetHeading: string
+  ResetBody: string
+  ResetToDefaults: string
+  ResetConfirmTitle: string
+  ResetConfirmBody: string
+  ResetConfirmAccept: string
+  InstallHeading: string
+  InstallBody: string
+  InstallApp: string
+  ToastReset: string
 }
 
 let esStrings = {
@@ -113,6 +130,47 @@ let esStrings = {
   ImportsHeading = "Imports"
   ExportMenu = "Exportar copia"
   RemoveMenu = "Quitar plan"
+  ThemeHeading = "Tema"
+  ThemeSystem = "Sistema"
+  ThemeLight = "Claro"
+  ThemeDark = "Oscuro"
+  AccentHeading = "Color de énfasis"
+  AccentName =
+    function
+    | Blue -> "Azul"
+    | Red -> "Rojo"
+    | Orange -> "Naranja"
+    | Green -> "Verde"
+    | Teal -> "Turquesa"
+    | Purple -> "Morado"
+    | Magenta -> "Magenta"
+    | Lime -> "Lima"
+    | Brown -> "Marrón"
+    | Pink -> "Rosa"
+    | Mango -> "Mango"
+    | Cobalt -> "Cobalto"
+    | Indigo -> "Índigo"
+    | Violet -> "Violeta"
+    | Crimson -> "Carmesí"
+    | Emerald -> "Esmeralda"
+    | Mauve -> "Malva"
+    | Sienna -> "Siena"
+    | Olive -> "Oliva"
+    | Steel -> "Acero"
+    | Taupe -> "Topo"
+  ResetHeading = "Restablecer"
+  ResetBody =
+    "Borra los planes guardados y devuelve los ajustes a sus valores predeterminados."
+  ResetToDefaults = "Restablecer valores predeterminados"
+  ResetConfirmTitle = "¿Restablecer todo?"
+  ResetConfirmBody =
+    "Se borrarán todos los planes y ajustes guardados en este dispositivo."
+  ResetConfirmAccept = "Restablecer"
+  InstallHeading = "Instalar"
+  InstallBody =
+    "La instalación en el dispositivo llegará en una próxima versión."
+  InstallApp = "Instalar aplicación"
+  ToastReset = "Ajustes restablecidos"
 }
 
 let enStrings = {
@@ -161,6 +219,45 @@ let enStrings = {
   ImportsHeading = "Imports"
   ExportMenu = "Export copy"
   RemoveMenu = "Remove plan"
+  ThemeHeading = "Theme"
+  ThemeSystem = "System"
+  ThemeLight = "Light"
+  ThemeDark = "Dark"
+  AccentHeading = "Accent color"
+  AccentName =
+    function
+    | Blue -> "Blue"
+    | Red -> "Red"
+    | Orange -> "Orange"
+    | Green -> "Green"
+    | Teal -> "Teal"
+    | Purple -> "Purple"
+    | Magenta -> "Magenta"
+    | Lime -> "Lime"
+    | Brown -> "Brown"
+    | Pink -> "Pink"
+    | Mango -> "Mango"
+    | Cobalt -> "Cobalt"
+    | Indigo -> "Indigo"
+    | Violet -> "Violet"
+    | Crimson -> "Crimson"
+    | Emerald -> "Emerald"
+    | Mauve -> "Mauve"
+    | Sienna -> "Sienna"
+    | Olive -> "Olive"
+    | Steel -> "Steel"
+    | Taupe -> "Taupe"
+  ResetHeading = "Reset"
+  ResetBody = "Clears the saved plans and returns every setting to its default."
+  ResetToDefaults = "Reset to default settings"
+  ResetConfirmTitle = "Reset everything?"
+  ResetConfirmBody =
+    "Every plan and setting stored on this device will be deleted."
+  ResetConfirmAccept = "Reset"
+  InstallHeading = "Install"
+  InstallBody = "Installing the app on your device arrives in a future update."
+  InstallApp = "Install app"
+  ToastReset = "Settings restored"
 }
 
 let strings() : Strings =

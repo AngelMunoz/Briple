@@ -69,6 +69,10 @@ val removePlan: unit -> unit
 /// Re-activates an import from history: re-put, re-parse, jump to Today.
 val activateImport: import: StoredImport -> unit
 
+/// Restores the default theme and accent and wipes the store: every import
+/// and every state lane. Then toasts, and returns to Today's empty state.
+val resetToDefaults: unit -> unit
+
 /// Restores boot state. `storedDate` is the raw ISO selectedDate; a missing
 /// or corrupted value falls back to today. Also starts the change
 /// subscription that persists selectedDate.
