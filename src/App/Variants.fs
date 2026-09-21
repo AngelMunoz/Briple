@@ -74,3 +74,8 @@ let resolveView
     ((candidate.Genero, candidate.OpcionId), false)
   | Some _ -> (firstVariant plan, true)
   | None -> (firstVariant plan, false)
+
+let extraKey(text: string) : string * string =
+  match text.IndexOf('|') with
+  | -1 -> ("", text.Trim())
+  | index -> (text.Substring(0, index).Trim(), text.Substring(index + 1).Trim())

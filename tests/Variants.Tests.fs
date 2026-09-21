@@ -129,3 +129,34 @@ QUnit.testAsync(
       assert'.notOk(rewrite, "missing stored view does not rewrite")
   }
 )
+
+QUnit.test(
+  "extraKey splits the #x extra on the first separator",
+  fun assert' ->
+    assert'.equal(fst(extraKey "decision | · text"), "decision", "key")
+    assert'.equal(snd(extraKey "decision | · text"), "· text", "body")
+
+    assert'.equal(
+      fst(extraKey "no separator"),
+      "",
+      "empty key without separator"
+    )
+
+    assert'.equal(
+      snd(extraKey "no separator"),
+      "no separator",
+      "body without separator"
+    )
+
+    assert'.equal(
+      fst(extraKey "a | b | c"),
+      "a",
+      "only the first separator splits"
+    )
+
+    assert'.equal(
+      snd(extraKey "a | b | c"),
+      "b | c",
+      "the body keeps later separators"
+    )
+)

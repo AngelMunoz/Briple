@@ -36,6 +36,13 @@ module Datetime =
            "@angelmunoz/metrino/date-picker-roller")>]
   let registerMetroDatePickerRoller: unit -> unit = jsNative
 
+  /// Dynamic-import variant of `registerMetroDatePickerRoller`: the component
+  /// loads in its own chunk instead of the entry bundle. Resolves when the
+  /// custom element is registered. The emit is the arrow itself: the call
+  /// site invokes it.
+  [<Emit("() => import('@angelmunoz/metrino/date-picker-roller').then((m) => m.registerMetroDatePickerRoller())")>]
+  let registerMetroDatePickerRollerDynamic: unit -> JS.Promise<unit> = jsNative
+
   /// Register `metro-time-picker` (`@angelmunoz/metrino/time-picker`).
   [<Import("registerMetroTimePicker", "@angelmunoz/metrino/time-picker")>]
   let registerMetroTimePicker: unit -> unit = jsNative

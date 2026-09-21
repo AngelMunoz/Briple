@@ -19,12 +19,14 @@ registerMetroHubSection()
 registerMetroIcon()
 registerMetroToast()
 
-// The view-chip flyout is not part of the first paint: it registers through a
-// dynamic import, and the chip stays inert until the chunk resolves.
-promise {
-  do! registerMetroMenuFlyoutDynamic()
-  App.State.flyoutReady.Value <- true
-}
+// The lazily registered components (flyout, date roller, expander) are not
+// part of the first paint: their imports load in their own chunks, and a tag
+// defined after its node exists upgrades that node in place.
+Promise.all [
+  registerMetroMenuFlyoutDynamic()
+  registerMetroDatePickerRollerDynamic()
+  registerMetroExpanderDynamic()
+]
 |> Promise.start
 
 promise {

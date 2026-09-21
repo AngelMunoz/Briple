@@ -38,3 +38,7 @@ val firstVariant: plan: Plan -> Genero * string
 /// missing variant, so the resolved view must be written back to the store.
 val resolveView:
   plan: Plan -> storedView: ViewState option -> (Genero * string) * bool
+
+/// Splits an `#x` extra ("key | body") into its key and body. Text without
+/// the separator carries an empty key.
+val extraKey: text: string -> string * string

@@ -16,6 +16,7 @@ open Plan.Types
 open Plan.Projection
 open App.Locale
 open App.Variants
+open App.Chrome
 open App.State
 
 // --- Models --------------------------------------
@@ -72,7 +73,7 @@ let firstFile(input: HTMLInputElement) : File option =
   else
     None
 
-let dateBlock() =
+let inline dateBlock() =
   Html.div [
     attr.style "padding:16px 16px 0"
     Html.div [
@@ -98,7 +99,7 @@ let dateBlock() =
     ]
   ]
 
-let emptyState() =
+let inline emptyState() =
   Html.div [
     attr.style "padding:16px;display:flex;flex-direction:column;gap:12px"
     Html.p [
@@ -135,15 +136,8 @@ let emptyState() =
     Html.show(
       (fun () -> importError.Value.IsSome),
       fun () ->
-        Html.div [
-          attr.style
-            "border-left:3px solid var(--metro-accent);padding:8px 12px"
-          Html.div [ attr.className "body"; Html.text (strings()).ImportFailed ]
-          Html.div [
-            attr.className "caption"
-            attr.style "opacity:0.7"
-            Html.text(importError.Value |> Option.defaultValue "")
-          ]
+        Chrome.noticeCard (strings()).ImportFailed [
+          importError.Value |> Option.defaultValue ""
         ]
     )
   ]
@@ -166,7 +160,7 @@ let planLineText() =
         s.PlanDone
   | _ -> ""
 
-let planLine() =
+let inline planLine() =
   Html.div [
     attr.className "body"
     attr.style "opacity:0.6;padding:0 16px"
@@ -186,19 +180,16 @@ let chipText() =
   let s = strings()
   $"{s.GeneroWord genero} · {Variants.display s.DiasUnit opcionId}"
 
-let viewChip() =
+let inline viewChip() =
   Html.metroButton [
     attr.className "view-chip"
     attr.style "min-height:34px;color:var(--metro-accent)"
-    on.click(fun _ ->
-      // Inert until the lazy chunk registered the component.
-      if flyoutReady.Value then
-        flyoutOpen.Value <- true)
+    on.click(fun _ -> flyoutOpen.Value <- true)
     Html.span [ attr.className "badge-text"; Html.text chipText ]
     Html.metroIcon [ attr.icon "chevron-down" ]
   ]
 
-let flyoutItem (genero: Genero) (item: VariantItem) =
+let inline flyoutItem (genero: Genero) (item: VariantItem) =
   let isActive() = view.Value = (genero, item.Id)
 
   Html.div [
@@ -217,7 +208,7 @@ let flyoutItem (genero: Genero) (item: VariantItem) =
     Html.span [ Html.text item.Label ]
   ]
 
-let viewFlyout() =
+let inline viewFlyout() =
   let s = strings()
 
   let blocks =
@@ -249,17 +240,15 @@ let viewFlyout() =
     yield! rows
   ]
 
-let viewChipArea() =
+let inline viewChipArea() =
   Html.div [
     attr.style
       "display:flex;flex-direction:column;align-items:flex-start;padding:0 16px"
     viewChip()
-    // Gated on registration: before the lazy chunk lands, the tag is an
-    // unknown element and its children would render as unstyled markup.
-    Html.show((fun () -> flyoutReady.Value), viewFlyout)
+    viewFlyout()
   ]
 
-let cardView (date: DateOnly) (dia: Dia) =
+let inline cardView (date: DateOnly) (dia: Dia) =
   let s = strings()
   let weekday = weekdayLong(locale(), toDateTime date)
   let model = cardModel dia weekday s.ExercisesBadge
@@ -294,14 +283,14 @@ let cardView (date: DateOnly) (dia: Dia) =
       ])
   ]
 
-let quietLine(text: string) =
+let inline quietLine(text: string) =
   Html.p [
     attr.className "body"
     attr.style "opacity:0.6;text-align:center;padding:16px"
     Html.text text
   ]
 
-let dayContent
+let inline dayContent
   (plan: Plan option)
   (anchor: DateOnly option)
   (viewValue: Genero * string)
@@ -330,7 +319,7 @@ let dayContent
 
 // The raw emit lives in a nested module the signature file does not declare:
 // Fable drops [<Emit>] bindings that a signature file exposes (see Locale.fs).
-module private Dom =
+module Dom =
   [<Emit("window.requestAnimationFrame($0)")>]
   let requestAnimationFrame(callback: unit -> unit) : unit = jsNative
 
@@ -372,7 +361,7 @@ let setSelectedDate(date: DateOnly) : unit =
     dayHub.scrollToSection(float index, "smooth")
     markSelectedSection index
 
-let chevronButton (direction: string) (step: int) =
+let inline chevronButton (direction: string) (step: int) =
   Html.button [
     attr.className "day-chevron"
     attr.style "min-height:34px"
@@ -388,7 +377,7 @@ let chevronButton (direction: string) (step: int) =
     Html.metroIcon [ attr.icon direction ]
   ]
 
-let daySection
+let inline daySection
   (plan: Plan option)
   (anchor: DateOnly option)
   (viewValue: Genero * string)
@@ -412,7 +401,7 @@ let daySection
 
 // The hub subtree is keyed on the week of the selected date, never on the
 // date itself: a day change is a scroll, only a week rollover rebuilds.
-let dayHubView
+let inline dayHubView
   (plan: Plan option)
   (anchor: DateOnly option)
   (viewValue: Genero * string)
@@ -474,7 +463,7 @@ let weekChipText(date: DateOnly) =
     | Completed -> s.PlanDone
   | _ -> ""
 
-let weekRowView(row: WeekRow) =
+let inline weekRowView(row: WeekRow) =
   let s = strings()
   let dt = toDateTime row.Date
   let weekday = weekdayShort(locale(), dt)
@@ -525,7 +514,7 @@ let weekRowView(row: WeekRow) =
 
 // Keyed on the week like the day hub: the chip, rows, and summary are
 // week-scoped, so day changes within the week never rebuild them.
-let weekView
+let inline weekView
   (plan: Plan option)
   (anchor: DateOnly option)
   (viewValue: Genero * string)
@@ -576,7 +565,7 @@ let weekView
           Html.span [ attr.className "caption"; Html.text s.Hoy ]
         ]
       ]
-      yield! rows |> List.map weekRowView
+      yield! rows |> List.map(fun row -> weekRowView row)
       Html.div [
         attr.className "caption"
         attr.style "opacity:0.6;padding:12px 16px"
@@ -585,7 +574,7 @@ let weekView
     ])
   |> Option.defaultValue Html.none
 
-let pivot() =
+let inline pivot() =
   Html.metroPivot [
     attr.selectedIndex pivotIndex
     on.pivotSelectionChanged(fun detail ->
@@ -616,7 +605,7 @@ let pivot() =
     ]
   ]
 
-let appBar() =
+let inline appBar() =
   Html.metroAppBar [
     Html.metroAppBarButton [
       attr.custom("slot", "menu")

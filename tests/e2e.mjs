@@ -70,6 +70,16 @@ async function see(page, text, note) {
     }
 }
 
+// The import preview interposes between choosing a file and the store:
+// every import flow ends by tapping the preview's commit button. The commit
+// walks back through history, so the helper waits for the hash to leave the
+// preview before the caller touches the page again.
+async function commitPreview(page, commitText = 'Usar este plan') {
+    await see(page, commitText, 'preview commit button');
+    await page.getByText(commitText).click();
+    await page.waitForFunction(() => !window.location.hash.includes('import'), { timeout: 8000 });
+}
+
 // All seven days' content coexists in the hub, so text presence does not
 // prove selection: the `selected` attribute on the section does.
 async function seeSelectedDay(page, header, note) {
@@ -91,11 +101,18 @@ await scenario('first run shows the empty state (es)', 'es-ES', async (page) => 
     await see(page, 'lunes', 'locale weekday in the date header');
 });
 
-// 2. Sample import flow: real click, real parse, real store, real toast.
-// Fresh import on Monday 2026-09-14 anchors to this Monday (the variant
-// trains today), so the plan line reads Semana 1 · RIR 3.
+// 2. Sample import flow: real click, real parse, real preview, real store,
+// real toast. Fresh import on Monday 2026-09-14 anchors to this Monday (the
+// variant trains today), so the plan line reads Semana 1 · RIR 3.
 await scenario('sample import renders the session day (es)', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
+    await see(page, 'Importar plan', 'preview title');
+    await see(page, 'Plan de Entrenamiento en Circuito - 4 Semanas', 'plan title from the file');
+    await see(page, '4 semanas', 'week count');
+    await see(page, '3 días — FULL BODY A / B / C (LUNES · MIÉRCOLES · VIERNES)', 'variant listed as a fact');
+    await see(page, '¿Cuándo empieza?', 'start-date heading');
+    await see(page, '14 de septiembre', 'default anchor on the field');
+    await page.getByText('Usar este plan').click();
     await see(page, 'Plan cargado · 3 variantes · 4 semanas', 'import toast');
     await see(page, 'Semana 1 de 4 · RIR 3', 'plan week line with mesociclo RIR');
     await see(page, 'Full Body A', 'session card title');
@@ -116,9 +133,10 @@ await scenario('sample import renders the session day (es)', 'es-ES', async (pag
     await seeSelectedDay(page, 'lun', 'Monday selected in the day hub');
 });
 
-// 3. The same flow through the real file picker input ("Load a plan").
+// 3. The same flow through the real file picker ("Load a plan").
 await scenario('Load a plan via the file picker', 'es-ES', async (page) => {
     await page.setInputFiles('input[type="file"]', fixture);
+    await commitPreview(page);
     await see(page, 'Plan cargado · 3 variantes · 4 semanas', 'import toast');
     await see(page, 'Full Body A', 'session card title');
 });
@@ -126,6 +144,7 @@ await scenario('Load a plan via the file picker', 'es-ES', async (page) => {
 // 4. Reload: the import survives through IndexedDB (local-first round trip).
 await scenario('Import survives a reload through IndexedDB', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
     await see(page, 'Full Body A', 'session card after import');
     await page.reload();
     await page.waitForSelector('metro-app-bar', { timeout: 15000 });
@@ -137,6 +156,7 @@ await scenario('Import survives a reload through IndexedDB', 'es-ES', async (pag
 //    next-session line shows there.
 await scenario('Rest day shows the quiet next-session line', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
     await see(page, 'Full Body A', 'session card before moving');
     await page.locator('button.day-chevron:has(metro-icon[icon="forward"])').first().click();
     await seeSelectedDay(page, 'mar', 'chevron moved to Tuesday');
@@ -147,6 +167,7 @@ await scenario('Rest day shows the quiet next-session line', 'es-ES', async (pag
 // 6. Hub selection: tapping a peeking section brings its day into view.
 await scenario('Tapping a hub section selects its day', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
     await see(page, 'Full Body A', 'Monday card');
     await page.locator('metro-hub > metro-hub-section').nth(2).click();
     await seeSelectedDay(page, 'mié', 'tap moved to Wednesday');
@@ -158,6 +179,7 @@ await scenario('Tapping a hub section selects its day', 'es-ES', async (page) =>
 // 7. Navigation: ⋯ menu reaches the Plan page, chevron returns.
 await scenario('App-bar menu navigates to Plan and back', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
     await see(page, 'Full Body A', 'Today rendered');
     await page.getByRole('button', { name: 'More options' }).click();
     await page.getByText('Plan de entrenamiento').click();
@@ -171,6 +193,7 @@ await scenario('App-bar menu navigates to Plan and back', 'es-ES', async (page) 
 // 8. Browser back drives the same navigation (system back where it exists).
 await scenario('Browser back returns from the Plan page', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
     await see(page, 'Full Body A', 'Today rendered');
     await page.getByRole('button', { name: 'More options' }).click();
     await page.getByText('Plan de entrenamiento').click();
@@ -184,6 +207,7 @@ await scenario('Empty state localizes to en', 'en-US', async (page) => {
     await see(page, 'Your calendar is empty.', 'empty title (en)');
     await see(page, 'Load a plan', 'load button (en)');
     await page.getByText('Try the sample plan').click();
+    await commitPreview(page, 'Use this plan');
     await see(page, 'Full Body A', 'session card (en chrome, es content)');
 });
 
@@ -191,6 +215,7 @@ await scenario('Empty state localizes to en', 'en-US', async (page) => {
 //     Day with that date selected and the hub gliding to it.
 await scenario('Week pivot: rows, summary, and row tap', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
     await see(page, 'Full Body A', 'Day rendered');
     await page.getByRole('tab', { name: 'Week' }).click();
     await see(page, 'SEPTIEMBRE', 'week range header');
@@ -211,6 +236,7 @@ await scenario('Week pivot: rows, summary, and row tap', 'es-ES', async (page) =
 //     switches the variant instantly, and the view persists across reload.
 await scenario('View chip switches variant and persists', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
     await see(page, 'Hombre · 3 días', 'chip shows the default view');
     await page.locator('metro-button.view-chip').click();
     await see(page, 'Mujer', 'flyout group header');
@@ -296,6 +322,7 @@ await scenario('Boot rewrites a stored view naming a missing variant', 'es-ES', 
 //     selecting anything.
 await scenario('Flyout light dismiss closes without changing the view', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
     await see(page, 'Full Body A', 'default variant rendered');
     await page.locator('metro-button.view-chip').click();
     await see(page, 'Mujer', 'flyout open');
@@ -307,6 +334,64 @@ await scenario('Flyout light dismiss closes without changing the view', 'es-ES',
         .waitFor({ state: 'hidden', timeout: 8000 });
     await see(page, 'Hombre · 3 días', 'view unchanged after dismiss');
     await see(page, 'Full Body A', 'day hub unchanged after dismiss');
+});
+
+// 14. Cancel: nothing reaches the store, not even after a reload.
+await scenario('Preview cancel stores nothing', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await see(page, 'Usar este plan', 'preview open');
+    await page.getByText('Cancelar').click();
+    await see(page, 'Tu calendario está vacío.', 'back on the empty state');
+    await page.reload();
+    await page.waitForSelector('metro-app-bar', { timeout: 15000 });
+    await see(page, 'Tu calendario está vacío.', 'store untouched after cancel');
+});
+
+// 15. Parse warnings render in the preview and do not block the commit. A
+//     "Samedi" day is injected into an otherwise clean fixture copy, so the
+//     preview shows exactly one unknown-day warning.
+const warnedFixture = fixtureText.replace(
+    '#end semana',
+    '#start dia Samedi\n#meta titulo Test\n#ej A|1|1|Test|1|-|-|-\n#end dia\n#end semana',
+);
+await scenario('Preview shows parse warnings', 'es-ES', async (page) => {
+    await page.setInputFiles('input[type="file"]', {
+        name: 'warned.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from(warnedFixture, 'utf8'),
+    });
+    await see(page, '⚠ 1 aviso del archivo', 'warning count line');
+    await see(page, '· línea', 'warning carries its line number');
+    await page.getByText('Usar este plan').click();
+    await see(page, 'Plan cargado · 3 variantes · 4 semanas', 'import still commits');
+    await see(page, 'Full Body A', 'known days still project');
+});
+
+// 16. Re-anchor: the Plan page roller writes a new anchor and every view
+//     re-projects - Today sits before the new start, so it shows the quiet
+//     before-plan line. The roller's gesture is a drag: one item height
+//     (40 px) up moves the day one step forward.
+await scenario('Re-anchor from the Plan page re-projects', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await see(page, 'Full Body A', 'imported');
+    await page.getByRole('button', { name: 'More options' }).click();
+    await page.getByText('Plan de entrenamiento').click();
+    await page.waitForURL(/#\/plan/, { timeout: 8000 });
+    await see(page, 'Inicio del plan', 'anchor row');
+    await see(page, '14 de septiembre', 'current anchor on the field');
+    await page.getByText('14 de septiembre').click();
+    const dayColumn = page.locator('metro-date-picker-roller .picker-column--day');
+    const box = await dayColumn.boundingBox();
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx, cy - 40, { steps: 4 });
+    await page.mouse.up();
+    await see(page, '15 de septiembre', 'anchor re-projected on the field');
+    await page.locator('header metro-hyperlink-button').first().click();
+    await see(page, 'El plan aún no empieza.', 'today sits before the new anchor');
 });
 
 await browser.close();

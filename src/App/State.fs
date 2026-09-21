@@ -23,6 +23,7 @@ type Page =
   | TodayPage
   | PlanPage
   | SettingsPage
+  | ImportPage
 
 let today() : DateOnly =
   let now = DateTime.Now
@@ -40,13 +41,20 @@ let pivotIndex: Var<float> = Var.create 0.0
 
 let importError: Var<string option> = Var.create None
 
-// The view-chip flyout registers through a dynamic import (Program.fs); until
-// that chunk resolves, the tag is an unknown element and the chip stays inert.
-let flyoutReady: Var<bool> = Var.create false
+/// A parsed import waiting in the preview. The store stays untouched until
+/// `commitImport` runs.
+type StagedImport = {
+  FileName: string
+  Raw: string
+  Parsed: ParsedPlan
+  Anchor: DateOnly
+}
+
+let pendingImport: Var<StagedImport option> = Var.create None
 
 // Persistence subscription for selectedDate, created in `init` so its
 // immediate first run cannot clobber the restored value with today's date.
-let mutable private datePersist: IDisposable option = None
+let mutable datePersist: IDisposable option = None
 
 // Shared metrino toast host. ToastHost registers its own <metro-toast>
 // element on the document body at the first `show`.
@@ -126,6 +134,7 @@ let parsePage =
   function
   | "#/plan" -> Some PlanPage
   | "#/settings" -> Some SettingsPage
+  | "#/import" -> Some ImportPage
   | "#/"
   | "" -> Some TodayPage
   | _ -> None
@@ -134,6 +143,7 @@ let pageToUrl =
   function
   | PlanPage -> "#/plan"
   | SettingsPage -> "#/settings"
+  | ImportPage -> "#/import"
   | TodayPage -> "#/"
 
 let router = new Routing.HashRouter<Page>(parsePage, pageToUrl)
@@ -145,7 +155,9 @@ let goTo(page: Page) : unit =
 let goBack() : unit = router.Jump(-1)
 
 // --- Import -----------------------------------------------------------------
-// Direct path: parse, store under the default anchor, toast.
+// Stage, then commit. `stageImport` parses and opens the preview; nothing
+// touches the store until `commitImport` writes the staged import with the
+// anchor chosen there (storyboard 4.6, S5b).
 
 let nowIso() : string =
   let now = DateTime.UtcNow
@@ -177,33 +189,50 @@ let idFor (fileName: string) (raw: string) : string =
 [<Emit("fetch($0).then((response) => response.text())")>]
 let fetchText(url: string) : JS.Promise<string> = jsNative
 
-let importText (fileName: string) (raw: string) : JS.Promise<unit> =
+let stageImport (fileName: string) (raw: string) : unit =
   match parsePlan raw with
   | Error error ->
     importError.Value <-
       Some(strings().ImportFailedDetail error.Line error.Message)
-
-    Promise.lift()
   | Ok parsedPlan ->
-    promise {
-      let plan = parsedPlan.Plan
-      let genero, opcionId = defaultView plan
-      let anchor = defaultAnchor plan genero opcionId (today())
+    let plan = parsedPlan.Plan
+    let genero, opcionId = defaultView plan
+    let anchor = defaultAnchor plan genero opcionId (today())
 
-      let import = {
-        Id = idFor fileName raw
+    pendingImport.Value <-
+      Some {
         FileName = fileName
-        ImportedAt = nowIso()
-        Anchor = anchor
         Raw = raw
+        Parsed = parsedPlan
+        Anchor = anchor
       }
 
+    goTo ImportPage
+
+let commitImport(anchor: DateOnly) : unit =
+  match pendingImport.Value with
+  | None -> ()
+  | Some staged ->
+    let parsedPlan = staged.Parsed
+    let plan = parsedPlan.Plan
+    let genero, opcionId = defaultView plan
+
+    let import = {
+      Id = idFor staged.FileName staged.Raw
+      FileName = staged.FileName
+      ImportedAt = nowIso()
+      Anchor = anchor
+      Raw = staged.Raw
+    }
+
+    promise {
       do! putImport import
       do! setViewState { Genero = genero; OpcionId = opcionId }
       activeImport.Value <- Some import
       parsed.Value <- Some parsedPlan
       view.Value <- (genero, opcionId)
       importError.Value <- None
+      pendingImport.Value <- None
 
       let variants =
         plan.Bloques |> List.sumBy(fun bloque -> bloque.Opciones.Length)
@@ -215,16 +244,60 @@ let importText (fileName: string) (raw: string) : JS.Promise<unit> =
         duration = Some 4000.0
       }
       |> ignore
+
+      goBack()
     }
     |> Promise.catch(fun err -> importError.Value <- Some(string err))
+    |> Promise.start
 
-/// Loads the bundled sample plan.
+let reAnchor(anchor: DateOnly) : unit =
+  match activeImport.Value with
+  | None -> ()
+  | Some import ->
+    let updated = { import with Anchor = anchor }
+
+    promise {
+      do! putImport updated
+      activeImport.Value <- Some updated
+    }
+    |> Promise.start
+
+let removePlan() : unit =
+  match activeImport.Value with
+  | None -> ()
+  | Some import ->
+    promise {
+      do! deleteImport import.Id
+      activeImport.Value <- None
+      parsed.Value <- None
+      goTo TodayPage
+    }
+    |> Promise.start
+
+let activateImport(import: StoredImport) : unit =
+  match parsePlan import.Raw with
+  | Error _ -> ()
+  | Ok parsedPlan ->
+    let plan = parsedPlan.Plan
+    let genero, opcionId = defaultView plan
+
+    promise {
+      do! putImport import
+      do! setViewState { Genero = genero; OpcionId = opcionId }
+      activeImport.Value <- Some import
+      parsed.Value <- Some parsedPlan
+      view.Value <- (genero, opcionId)
+      goTo TodayPage
+    }
+    |> Promise.start
+
+/// Loads the bundled sample plan into the preview.
 let importSample() : JS.Promise<unit> = promise {
   let! text = fetchText "./samples/plan_entrenamiento_4sem.txt"
-  return! importText "plan_entrenamiento_4sem.txt" text
+  stageImport "plan_entrenamiento_4sem.txt" text
 }
 
 let importFile(file: File) : JS.Promise<unit> = promise {
   let! text = file.text()
-  return! importText file.name text
+  stageImport file.name text
 }

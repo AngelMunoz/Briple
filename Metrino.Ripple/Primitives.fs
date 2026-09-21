@@ -24,6 +24,13 @@ module Primitives =
   [<Import("registerMetroExpander", "@angelmunoz/metrino/expander")>]
   let registerMetroExpander: unit -> unit = jsNative
 
+  /// Dynamic-import variant of `registerMetroExpander`: the component loads
+  /// in its own chunk instead of the entry bundle. Resolves when the custom
+  /// element is registered. The emit is the arrow itself: the call site
+  /// invokes it.
+  [<Emit("() => import('@angelmunoz/metrino/expander').then((m) => m.registerMetroExpander())")>]
+  let registerMetroExpanderDynamic: unit -> JS.Promise<unit> = jsNative
+
   /// Register `metro-icon` (`@angelmunoz/metrino/icon`).
   [<Import("registerMetroIcon", "@angelmunoz/metrino/icon")>]
   let registerMetroIcon: unit -> unit = jsNative

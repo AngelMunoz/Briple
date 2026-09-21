@@ -19,6 +19,12 @@
     <Compile Include="App\Variants.fs" />
     <Compile Include="App\State.fsi" />
     <Compile Include="App\State.fs" />
+    <Compile Include="App\Chrome.fsi" />
+    <Compile Include="App\Chrome.fs" />
+    <Compile Include="App\Preview.fsi" />
+    <Compile Include="App\Preview.fs" />
+    <Compile Include="App\PlanPage.fsi" />
+    <Compile Include="App\PlanPage.fs" />
     <Compile Include="App\Today.fsi" />
     <Compile Include="App\Today.fs" />
     <Compile Include="App\Shell.fsi" />

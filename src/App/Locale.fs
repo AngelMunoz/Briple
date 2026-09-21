@@ -44,6 +44,20 @@ type Strings = {
   ImportFailedDetail: int -> string -> string
   GeneroWord: Genero -> string
   DiasUnit: string
+  PreviewTitle: string
+  Commit: string
+  Cancel: string
+  StartHeading: string
+  StartsLabel: string
+  WeeksCount: int -> string
+  WarningsLine: int -> string
+  WarningLine: string -> int -> string
+  VariantsHeading: string
+  AnchorLabel: string
+  GuiaHeading: string
+  ImportsHeading: string
+  ExportMenu: string
+  RemoveMenu: string
 }
 
 let esStrings = {
@@ -80,6 +94,25 @@ let esStrings = {
     | Hombre -> "Hombre"
     | Mujer -> "Mujer"
   DiasUnit = "días"
+  PreviewTitle = "Importar plan"
+  Commit = "Usar este plan"
+  Cancel = "Cancelar"
+  StartHeading = "¿Cuándo empieza?"
+  StartsLabel = "Inicio:"
+  WeeksCount = fun semanas -> $"{semanas} semanas"
+  WarningsLine =
+    fun n ->
+      if n = 1 then
+        "⚠ 1 aviso del archivo"
+      else
+        $"⚠ {n} avisos del archivo"
+  WarningLine = fun mensaje linea -> $"{mensaje} · línea {linea}"
+  VariantsHeading = "Variantes en el archivo"
+  AnchorLabel = "Inicio del plan"
+  GuiaHeading = "Guía del plan"
+  ImportsHeading = "Imports"
+  ExportMenu = "Exportar copia"
+  RemoveMenu = "Quitar plan"
 }
 
 let enStrings = {
@@ -113,6 +146,21 @@ let enStrings = {
     | Hombre -> "Men"
     | Mujer -> "Women"
   DiasUnit = "days"
+  PreviewTitle = "Import plan"
+  Commit = "Use this plan"
+  Cancel = "Cancel"
+  StartHeading = "When does it start?"
+  StartsLabel = "Start:"
+  WeeksCount = fun weeks -> $"{weeks} weeks"
+  WarningsLine =
+    fun n -> if n = 1 then "⚠ 1 file warning" else $"⚠ {n} file warnings"
+  WarningLine = fun message line -> $"{message} · line {line}"
+  VariantsHeading = "Variants in the file"
+  AnchorLabel = "Plan start"
+  GuiaHeading = "Plan guide"
+  ImportsHeading = "Imports"
+  ExportMenu = "Export copy"
+  RemoveMenu = "Remove plan"
 }
 
 let strings() : Strings =
@@ -167,7 +215,7 @@ let monthLong(locale: string, date: DateTime) : string =
 let dayMonth(locale: string, date: DateTime) : string =
   Intl.dayMonth(locale, date)
 
-let private isLeapYear(year: int) =
+let isLeapYear(year: int) =
   year % 4 = 0 && (year % 100 <> 0 || year % 400 = 0)
 
 let dayOfYear(date: DateOnly) =

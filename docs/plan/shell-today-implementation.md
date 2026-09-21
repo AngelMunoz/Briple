@@ -1,6 +1,6 @@
 # Implementation Plan - Shell, Projection, Today (slices 2 to 5)
 
-> Status: slices 2, 3, 3b and 4 are done and committed. Slice 5 is done in the working tree and awaits review.
+> Status: slices 2 to 5 are committed. Slice 6 is implemented in the working tree (section 12) and awaits review.
 > Design: `docs/design/training-pwa-storyboards.md`, build order items 2 to 5.
 > Style: Simplified Technical English (ASD-STE100). Procedural sentences: 20 words or fewer. Descriptive sentences: 25 words or fewer.
 
@@ -323,7 +323,7 @@ Criteria revision 2026-09-20: the Today card shows the full routine of the dia, 
 
 Slice 4 (week pivot) is committed (3260aa3): selectedDate persists through the raw state lane with a defensive boot parse; `weekRows` and `planChipState` landed in the projection with browser tests; the Week item renders the range header, chip row (chip, week chevrons, Hoy), seven plain rows, and the sessions summary; a row tap writes selectedDate and pivots to Day. External date writes go through `setSelectedDate`, which scrolls the day hub and marks the section when the week is unchanged. Gates re-ran green: builds clean, 27 browser tests, ten end-to-end scenarios.
 
-Slice 5 (view chip) is implemented in the working tree, not committed; it awaits review. The chip sits between the plan line and the pivot and reads "{Genero word} · {opcion display}" from the locale table ("Hombre · 3 días"; en: "Men · 3 days"). `App.Variants` owns the display helper ("3dias" to "3 días", raw id otherwise), the flyout group builder (one group per Bloque, items "{display} — {titulo}"), and `resolveView`; the boot fallback now rewrites the store's ViewState lane when the stored view names a missing variant. The chip's flyout opens with the `open` attribute only: the flyout node sits in the layout under the chip, and `attr.open'` (new binding members over `Base.booleanAttribute`) drives the reflected boolean. No `show()` call, no positioning ref. `metro-menu-flyout` registers through a dynamic import (`registerMetroMenuFlyoutDynamic` in Metrino.Ripple, raw `import()` emit); Program.fs raises `State.flyoutReady` when the chunk lands, the chip stays inert until then, and the flyout subtree renders only when ready. Selection closes the flyout and goes through `State.setView` (store lane first, then the view var). Gates re-ran green: builds clean, 30 browser tests (3 new: display, groups, resolveView), thirteen end-to-end scenarios (new: chip switch and reload persistence, boot fallback rewrite seeded through raw IndexedDB, light dismiss without selection). The compiled graph holds no static import of `@angelmunoz/metrino/menu-flyout`; the dynamic import is the only reference, so the component ships as its own chunk.
+Slice 5 (view chip) is committed (0ef52bf). The chip sits between the plan line and the pivot and reads "{Genero word} · {opcion display}" from the locale table ("Hombre · 3 días"; en: "Men · 3 days"). `App.Variants` owns the display helper ("3dias" to "3 días", raw id otherwise), the flyout group builder (one group per Bloque, items "{display} — {titulo}"), and `resolveView`; the boot fallback now rewrites the store's ViewState lane when the stored view names a missing variant. The chip's flyout opens with the `open` attribute only: the flyout node sits in the layout under the chip, and `attr.open'` (new binding members over `Base.booleanAttribute`) drives the reflected boolean. No `show()` call, no positioning ref. `metro-menu-flyout` registers through a dynamic import (`registerMetroMenuFlyoutDynamic` in Metrino.Ripple, raw `import()` emit) with no readiness gate: the imports fire at boot, and a tag defined after its node exists upgrades that node in place. Selection closes the flyout and goes through `State.setView` (store lane first, then the view var). Gates re-ran green: builds clean, 30 browser tests (3 new: display, groups, resolveView), thirteen end-to-end scenarios (new: chip switch and reload persistence, boot fallback rewrite seeded through raw IndexedDB, light dismiss without selection). The compiled graph holds no static import of `@angelmunoz/metrino/menu-flyout`; the dynamic import is the only reference, so the component ships as its own chunk.
 
 Implementation notes:
 
@@ -331,4 +331,58 @@ Implementation notes:
 - `Fable.Browser.Navigator` was added for the typed `navigator.language` binding.
 - Fable drops `[<Emit>]` bindings that a `.fsi` file exposes. The Intl emits live in a nested module inside `Locale.fs`, and the public surface wraps them.
 - Upstream metrino 0.5.1 bug (menu-flyout): the `.backdrop` is `position: fixed` and the `.menu-flyout` container is static, so the backdrop paints over the menu and swallows every item click; `show()`'s `left/top` are dead on a static element too. The metrino demo never wires item clicks, so the bug went unnoticed. Briple carries the workaround: slotted items carry `position: relative`, which paints them above the backdrop. Drop it when metrino fixes the component (`position: relative` on `.menu-flyout` would fix clicks and `show()` positioning at once).
+- Upstream metrino 0.5.1 bug (date-picker-roller): `#handlePointerDown` calls `setPointerCapture`, which retargets the later click to the column, so `#handleClick`'s `.picker-item` target check fails - tapping an item never selects it. Drag and wheel work. The e2e drives the real drag gesture (40 px up = one day forward). A fix would clear the capture or read the item from the pointer coordinates.
 - The e2e `see` helper filters matches to visible elements: the closed flyout holds hidden copies of the opcion labels, and a plain `.first()` match can pick a hidden one.
+
+## 13. Status
+
+Slices 2 to 5 are committed. Slice 6 (import preview and Plan page) is implemented in the working tree and awaits review: `stageImport` parses and opens the `#/import` route; nothing touches the store before the preview's commit button, which writes the import with the anchor chosen on the roller, toasts, and walks history back to Today. The Plan page carries the file title and origin, the full variant list (tap = switch view and jump to Today), the anchor row with the re-anchor roller, the `#x` extras grouped by key under `metro-expander`, the imports history (current marked, re-loadable), and an app bar with export (raw download) and remove. The interim direct-commit import is gone. Gates: builds clean, 31 browser tests (new: `extraKey`), sixteen end-to-end scenarios (new: preview commit flows everywhere, cancel stores nothing, warnings render, re-anchor re-projects). The compiled graph holds no static import of the lazily registered components.
+
+## 12. Slice 6 - Import preview and Plan page
+
+Design: storyboard 4.6 (preview `S5b`) and the Plan screen storyboard. Scope is full: preview flow plus the whole Plan page. The plan text (5.6) already puts the Plan page app bar items in slice 6, and no later slice claims the rest.
+
+### 12.1 Decisions
+
+| Decision | Reason |
+|---|---|
+| The preview is a full-bleed app layer, not `metro-content-dialog`. | The phone layout is the design of record (storyboard responsive table). The phone MDL form is full screen; the centered dialog is the Windows 8 desktop form. The component is a fixed centered card (`max-width: 500px`) with no part attributes, so it cannot go full bleed from the app. Slice 9 wraps the same content in the dialog for desktop. |
+| The preview is the route `#/import`. Back chevron and browser back cancel. | Hub and spokes; the other chooser pages do the same. Cancel stores nothing and shows no toast. |
+| The sample plan runs the same preview. | Storyboard S1: "runs the same import flow". After slice 6 no direct-commit path exists. |
+| A hard parse error never opens a preview. | There is nothing to preview. The error card on Today stays. |
+| Start date: a field button shows the localized date; a tap expands `metro-date-picker-roller` in place. | Option 2. The roller is the WP8 picker idiom; the preview layer is already full screen, so the roller embeds inside it. Default from `defaultAnchor`. `metro-date-picker` is not used: its native input opens a second, non-MDL picker over the roller. |
+| Commit writes the import with the chosen anchor, toasts, and lands on Today. `selectedDate` stays today. | Design 4.6. A future anchor shows the quiet before-plan line; no auto-jump. |
+| No progress ring. | Parsing is synchronous and the file is local; a "Reading plan…" state can never render. |
+| Warnings render kind, message, and line. | `ParseWarning` carries no semana; a line-to-semana lookup does not exist. |
+| Plan page: variants list, anchor row, guía, imports history, export, remove. Variants tap = `setView` + Today. Anchor tap = field + roller, re-put with new anchor. | Plan screen storyboard. Re-anchor is `putImport` with the same id; every view re-projects from the anchor. |
+| Guía: split each extra on the first `|`; key verbatim, body under `metro-expander`. | `Extras` holds `#x `-stripped text (`Parser.fs:111`); keys are file content, so verbatim. |
+| Remove runs `deleteImport` with no confirmation. | The file is re-importable; `deleteImport` clears the active pointer. |
+| Export downloads the stored `Raw` as a file. | No component needed. |
+| Lazy registrations: `date-picker-roller`, `expander`. | The flyout pattern. Neither is needed at first paint. `content-dialog` and `date-picker` are untouched in V1. |
+| Imports history reads `listImports`; re-load re-puts the old import and re-parses. | The store API already supports it. |
+
+### 12.2 Files
+
+- Edit `src/App/State.fsi` + `State.fs`: `pendingImport` var (file name, raw, parsed, anchor), `stageImport` replaces the direct commit in `importText`, `commitImport`, `reAnchor`, `removePlan`. The toast moves to `commitImport`.
+- New `src/App/Preview.fsi` + `Preview.fs`: the `#/import` route view. Field + roller for the anchor; contents list from `Variants.groups`; warnings list; commit and cancel.
+- New `src/App/PlanPage.fsi` + `PlanPage.fs`: the Plan page view; `Shell.fs` drops its placeholder.
+- Edit `src/Program.fs`: lazy registrations.
+- Edit `src/App/Locale.fsi` + `Locale.fs`: about fifteen keys (preview title, commit, cancel, reading line, start-date label, warning line, Plan page headings, origin, export, remove, history stamp).
+- Edit `tests/e2e.mjs`: scenarios 2, 3, 4 gain the preview commit step. New: cancel stores nothing; warnings render; re-anchor re-projects. The roller takes plain taps on column values, so Playwright drives it without drags.
+
+### 12.3 Tasks
+
+1. State: staging, commit, re-anchor, remove. Drop the interim flow.
+2. Preview route view with field + roller.
+3. Plan page view; wire the router.
+4. Lazy registrations and locale keys.
+5. Browser-lane helper for the extras key split (`Extras` text to key and body).
+6. E2E updates and new scenarios.
+7. Gates (section 8).
+
+### 12.4 Acceptance
+
+- Import always goes through the preview; cancel leaves the store untouched.
+- The roller sets the anchor; commit lands on Today with the chosen anchor in the store.
+- The Plan page matches the storyboard: variants, anchor, guía, history, export, remove.
+- Gates green, fantomas clean, no static import of the four lazy components.

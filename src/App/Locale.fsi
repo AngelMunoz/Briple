@@ -37,6 +37,20 @@ type Strings = {
   ImportFailedDetail: int -> string -> string
   GeneroWord: Genero -> string
   DiasUnit: string
+  PreviewTitle: string
+  Commit: string
+  Cancel: string
+  StartHeading: string
+  StartsLabel: string
+  WeeksCount: int -> string
+  WarningsLine: int -> string
+  WarningLine: string -> int -> string
+  VariantsHeading: string
+  AnchorLabel: string
+  GuiaHeading: string
+  ImportsHeading: string
+  ExportMenu: string
+  RemoveMenu: string
 }
 
 val esStrings: Strings
