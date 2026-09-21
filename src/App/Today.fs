@@ -33,12 +33,6 @@ type CardModel = {
   Exercises: CardExercise list
 }
 
-let schemeLine(exercise: Ejercicio) : string option =
-  [ exercise.Reps; exercise.Rir; exercise.Descanso ]
-  |> List.filter(fun part -> part <> "-")
-  |> String.concat " · "
-  |> fun line -> if line = "" then None else Some line
-
 // The card shows the full routine of the dia, flat: every exercise with its
 // scheme. Mesociclo, circuit grouping, and guía detail belong to the
 // session detail view.
@@ -165,6 +159,18 @@ let inline planLine(s: Strings) =
     attr.style "opacity:0.6;padding:0 16px"
     Html.text(planLineText s)
   ]
+
+// The session-detail command on the app bar exists only when the selected
+// date carries a session in the viewed variant; rest days and the quiet
+// before/after states have nothing to show.
+let hasSelectedSession() : bool =
+  match parsed.Value, activeImport.Value with
+  | Some parsedPlan, Some import ->
+    let (genero, opcionId) = view.Value
+
+    trySession parsedPlan.Plan genero opcionId import.Anchor selectedDate.Value
+    |> Option.isSome
+  | _ -> false
 
 // --- View chip -----------------------------------------------------------
 // The chip is the only place Genero/Opcion appear on Today. The flyout is
@@ -321,6 +327,9 @@ module Dom =
   [<Emit("window.requestAnimationFrame($0)")>]
   let requestAnimationFrame(callback: unit -> unit) : unit = jsNative
 
+  [<Emit("document.contains($0)")>]
+  let isAttached(element: HTMLElement) : bool = jsNative
+
 // The metrino hub surface this screen drives (metrino 0.5). The hub owns no
 // selection state: chevrons and the mount scroll call `scrollToSection`, and
 // a pan reports the settled section back through `selectionchanged`.
@@ -426,8 +435,11 @@ let inline dayHubView
         Dom.requestAnimationFrame(fun _ ->
           hub.scrollToSection(float(dayIndexOf weekStart), "auto")))
       on.hubSelectionChanged(fun detail ->
-        selectedDate.Value <- addDays weekStart detail.selectedIndex
-        markSelectedSection detail.selectedIndex)
+        // A reactive rebuild disposes the hub mid-scroll; its dying settle
+        // reports a stale index. Only a connected hub speaks for the user.
+        if Dom.isAttached dayHub then
+          selectedDate.Value <- addDays weekStart detail.selectedIndex
+          markSelectedSection detail.selectedIndex)
       yield!
         dates
         |> List.indexed

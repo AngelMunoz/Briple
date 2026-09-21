@@ -17,6 +17,7 @@ type Page =
   | PlanPage
   | SettingsPage
   | ImportPage
+  | SessionPage
 
 val today: unit -> DateOnly
 
@@ -82,7 +83,7 @@ val init:
   storedDate: string option ->
     unit
 
-/// Hash router over the four pages; NewUrl pushes history, Jump -1 is back.
+/// Hash router over the pages; NewUrl pushes history, Jump -1 is back.
 val router: Fable.Ripple.Dom.Routing.HashRouter<Page>
 
 val goTo: page: Page -> unit

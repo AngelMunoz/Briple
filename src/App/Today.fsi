@@ -18,4 +18,8 @@ type CardModel = {
 val cardModel:
   dia: Dia -> weekdayName: string -> badge: (int -> int -> string) -> CardModel
 
+/// True when the selected date has a session in the viewed variant: the
+/// app bar's session-detail command shows only then.
+val hasSelectedSession: unit -> bool
+
 val view: unit -> Fable.Ripple.Dom.DomItem

@@ -29,6 +29,8 @@
     <Compile Include="App\PlanPage.fs" />
     <Compile Include="App\Today.fsi" />
     <Compile Include="App\Today.fs" />
+    <Compile Include="App\SessionDetail.fsi" />
+    <Compile Include="App\SessionDetail.fs" />
     <Compile Include="App\SettingsPage.fsi" />
     <Compile Include="App\SettingsPage.fs" />
     <Compile Include="App\Shell.fsi" />

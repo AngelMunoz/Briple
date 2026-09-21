@@ -393,3 +393,41 @@ Metrino 0.5.2 made `metro-menu-flyout` imperative-only: `open` is a read-only ge
 ## 15. Status
 
 The app bar is fixed chrome: `Shell` renders it per route and measures it with a `ResizeObserver` into `--app-bar-height`. The shell's scrolling region reserves that height plus the safe-area inset, so the Plan page's imports section no longer hides behind the bar. Today, Plan, and Preview no longer own a scroller or their app bar. Gates re-ran green: builds clean, 31 browser tests, seventeen end-to-end scenarios (new: Plan imports clear the fixed app bar).
+
+## 16. Slice 7 - Session detail
+
+Design: storyboard 4.4 (S4). The entry point differs from the storyboard: the Today app bar's info command opens the page. The command is a Windows Phone command, not navigation. The Today card stays non-interactive, and the week row keeps its jump-to-Day behavior, so flow F3's "row tap opens the detail" is dropped.
+
+### 16.1 Decisions
+
+| Decision | Reason |
+|---|---|
+| The detail is the route `#/session`, a full-bleed page. | The content is taller than one phone viewport. The shell owns the scroll region and the back chevron. The centered `metro-content-dialog` was already rejected on phone in slice 6. |
+| One info `metro-app-bar-button` on Today's bar, hidden on rest days and outside the plan range. | The app bar holds commands, never navigation. No route parameters: the page reads `selectedDate` and `view` from state, so it always shows the variant it was opened from. |
+| Circuit headers take the accent; a heavier divider separates circuits; exercises inside one circuit separate by spacing alone. | Accent discipline (design section 2); a circuit's exercises belong together. |
+| The exercise order renders as the `{circuito}{orden}` idiom ("A1"); the round count renders in the circuit header. | Storyboard S4; the format keeps one `Vueltas` value per circuit. |
+| Guía trailer: the first `descansos` line and the first `regla-circuito` line, descansos first, "· " prefix. | One or two lines next to the circuits they describe; the full lists stay on the Plan page's guide. |
+| The exercise scheme line is one definition, shared by the Today card and the detail; hoisted to `Chrome.schemeLine`. | Two surfaces, one line: reps, RIR, and rest verbatim, `-` dropped. |
+| A direct `#/session` visit on a rest day or outside the range degrades to the quiet Today states. | Rest, before-plan, and completed are visible states, never errors. |
+| The hub `selectionchanged` handler writes only while the hub is attached. | A reactive rebuild can dispose the hub mid-scroll; its dying settle reported a stale index and reset the selected day before the fresh hub mounted (the week-row tap regression, found when the gates re-ran). |
+
+### 16.2 Files
+
+- New `src/App/SessionDetail.fsi` + `SessionDetail.fs`: header (date caption, session title, plan-week badge), circuit groups, trailer, quiet states. `detailGroups` and `guideTrailer` are pure.
+- Edit `src/App/Chrome.fsi` + `Chrome.fs`: `schemeLine` hoisted from Today.
+- Edit `src/App/Today.fsi` + `Today.fs`: the local schemeLine is gone; `hasSelectedSession` gates the app bar command; the hub event guard.
+- Edit `src/App/State.fsi` + `State.fs`: `SessionPage` with the `#/session` route.
+- Edit `src/App/Shell.fsi` + `Shell.fs`: the route case (no app bar on the detail), Today bar's info command.
+- Edit `src/App/Locale.fsi` + `Locale.fs`: `DetailMenu`, `CircuitHeading`, `CircuitHeadingOnly`.
+- Edit `tests/e2e.mjs`: scenario 20 drives the command, the badge, both circuit headers, the A1 idiom, the verbatim scheme, both trailer lines, and back; scenario 21 pins that the command hides on rest days. Scenario 10 doubles as the regression test for the hub guard.
+
+### 16.3 Acceptance
+
+- The info command opens the selected day's routine; the back chevron returns to Today.
+- The page shows the mesociclo badge, circuit groups with round counts and the A1 idiom, verbatim schemes with notes, and the two trailer lines.
+- Rest days and the quiet states show no command.
+- Gates green (section 8): builds clean, 31 browser tests, twenty-one end-to-end scenarios, `pnpm build`, fantomas clean.
+
+## 17. Status
+
+Slice 7 is implemented in the working tree and awaits review. It carries one bug fix found while re-running the gates: a week-row tap could lose the selected day, because a reactive rebuild disposed the day hub mid-scroll and the dying hub's last notification reset `selectedDate` before the fresh hub mounted. The hub event handler now writes only while the hub is attached. Gates: builds clean, 31 browser tests, twenty-one end-to-end scenarios (new: session detail, command hidden on rest days), `pnpm build`, fantomas clean.

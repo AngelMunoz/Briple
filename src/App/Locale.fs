@@ -75,6 +75,9 @@ type Strings = {
   InstallBody: string
   InstallApp: string
   ToastReset: string
+  DetailMenu: string
+  CircuitHeading: string -> string -> string
+  CircuitHeadingOnly: string -> string
 }
 
 let esStrings = {
@@ -171,6 +174,10 @@ let esStrings = {
     "La instalación en el dispositivo llegará en una próxima versión."
   InstallApp = "Instalar aplicación"
   ToastReset = "Ajustes restablecidos"
+  DetailMenu = "Detalle de sesión"
+  CircuitHeading =
+    fun circuito vueltas -> $"Circuito {circuito} · {vueltas} vueltas"
+  CircuitHeadingOnly = fun circuito -> $"Circuito {circuito}"
 }
 
 let enStrings = {
@@ -258,6 +265,9 @@ let enStrings = {
   InstallBody = "Installing the app on your device arrives in a future update."
   InstallApp = "Install app"
   ToastReset = "Settings restored"
+  DetailMenu = "Session detail"
+  CircuitHeading = fun circuit rounds -> $"Circuit {circuit} · {rounds} rounds"
+  CircuitHeadingOnly = fun circuit -> $"Circuit {circuit}"
 }
 
 let strings() : Strings =

@@ -68,6 +68,9 @@ type Strings = {
   InstallBody: string
   InstallApp: string
   ToastReset: string
+  DetailMenu: string
+  CircuitHeading: string -> string -> string
+  CircuitHeadingOnly: string -> string
 }
 
 val esStrings: Strings

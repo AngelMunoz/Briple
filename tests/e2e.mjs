@@ -545,6 +545,49 @@ await scenario('Reset to defaults clears settings and data', 'es-ES', async (pag
     if (!cleared) throw new Error('expected the store to be empty after reset');
 });
 
+// 20. Session detail: the Today app bar's info command opens the selected
+//     day's routine as a plan - mesociclo badge, circuit groups with the
+//     A1 idiom and round counts, and the guía trailer - and back returns
+//     to Today.
+await scenario('Session detail shows circuits, badge, and guide trailer', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await see(page, 'Full Body A', 'Today rendered');
+    const info = page.locator('metro-app-bar-button[icon="info"]');
+    await info.waitFor({ timeout: 8000 });
+    await info.click();
+    await page.waitForURL(/#\/session/, { timeout: 8000 });
+    await see(page, 'lunes · 14 de septiembre', 'date caption in the header');
+    await see(page, 'SEMANA 1 DE 4 · RIR 3', 'mesociclo badge line');
+    await see(page, 'Circuito A · 4 vueltas', 'first circuit header');
+    await see(page, 'Circuito B · 3 vueltas', 'second circuit header');
+    await see(page, 'A1', 'circuit-order idiom');
+    await see(page, 'A2', 'second idiom of circuit A');
+    await see(page, 'B1', 'circuit B idiom');
+    await see(page, 'Sentadilla con barra', 'first exercise');
+    await see(page, '6-8 · 1-2 · 3 min', 'verbatim scheme line');
+    await see(page, '· Entre ejercicios del circuito: 60-90 s. Entre circuitos: 2-3 min.', 'rests trailer line');
+    await see(page, '· 1. En circuito la percepción de esfuerzo', 'circuit-rule trailer line');
+    await page.locator('header metro-hyperlink-button').first().click();
+    await see(page, 'Full Body A', 'back on Today');
+});
+
+// 21. The info command exists only when the selected day carries a
+//     session: a rest day hides it.
+await scenario('Session detail command hides on rest days', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await see(page, 'Full Body A', 'Monday rendered');
+    await page.locator('metro-app-bar-button[icon="info"]').waitFor({ timeout: 8000 });
+    await page.locator('button.day-chevron:has(metro-icon[icon="forward"])').first().click();
+    await seeSelectedDay(page, 'mar', 'chevron moved to Tuesday');
+    await page.waitForFunction(
+        () => !document.querySelector('metro-app-bar-button[icon="info"]'),
+        { timeout: 8000 },
+    );
+    await see(page, 'Descanso · próxima sesión: miércoles, Full Body B', 'rest-day line still present');
+});
+
 await browser.close();
 await server.close();
 

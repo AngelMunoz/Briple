@@ -9,6 +9,7 @@ open Fable.Ripple
 open Fable.Ripple.Dom
 open Metrino.Ripple
 open Briple.Store
+open Plan.Types
 open App.Locale
 open App.State
 
@@ -33,6 +34,12 @@ let inline heading(text: string) : DomItem =
     attr.style "opacity:0.6;margin-top:8px"
     Html.text text
   ]
+
+let inline schemeLine(exercise: Ejercicio) : string option =
+  [ exercise.Reps; exercise.Rir; exercise.Descanso ]
+  |> List.filter(fun part -> part <> "-")
+  |> String.concat " · "
+  |> fun line -> if line = "" then None else Some line
 
 /// The accent-bordered notice surface: a title line and quiet detail lines.
 let inline noticeCard (title: string) (lines: string list) : DomItem =

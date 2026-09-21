@@ -25,6 +25,7 @@ type Page =
   | PlanPage
   | SettingsPage
   | ImportPage
+  | SessionPage
 
 let today() : DateOnly =
   let now = DateTime.Now
@@ -146,6 +147,7 @@ let parsePage =
   | "#/plan" -> Some PlanPage
   | "#/settings" -> Some SettingsPage
   | "#/import" -> Some ImportPage
+  | "#/session" -> Some SessionPage
   | "#/"
   | "" -> Some TodayPage
   | _ -> None
@@ -155,6 +157,7 @@ let pageToUrl =
   | PlanPage -> "#/plan"
   | SettingsPage -> "#/settings"
   | ImportPage -> "#/import"
+  | SessionPage -> "#/session"
   | TodayPage -> "#/"
 
 let router = new Routing.HashRouter<Page>(parsePage, pageToUrl)

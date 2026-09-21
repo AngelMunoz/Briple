@@ -57,6 +57,18 @@ let private bindAppBar(el: HTMLElement) =
 let todayBar(s: Strings) =
   Html.metroAppBar [
     attr.ref(fun el -> bindAppBar el)
+    // Primary command: the session detail for the selected day. The show
+    // wrapper keeps it off the bar on rest days and the quiet states.
+    Html.show(
+      App.Today.hasSelectedSession,
+      fun () ->
+        Html.metroAppBarButton [
+          attr.icon "info"
+          attr.label s.DetailMenu
+          attr.custom("aria-label", s.DetailMenu)
+          on.click(fun _ -> goTo SessionPage)
+        ]
+    )
     Html.metroAppBarButton [
       attr.custom("slot", "menu")
       attr.icon "calendar"
@@ -95,15 +107,17 @@ let appBar(s: Strings) =
   Html.switch router.CurrentRoute (function
     | Some PlanPage -> planBar s
     | Some SettingsPage
-    | Some ImportPage -> Html.none
+    | Some ImportPage
+    | Some SessionPage -> Html.none
     | _ -> todayBar s)
 
-// The import preview and the Settings page have no bar; their content uses
-// the whole viewport.
+// The import preview, the Settings page, and the session detail have no
+// bar; their content uses the whole viewport.
 let routeHasAppBar() =
   match router.CurrentRoute.Value with
   | Some SettingsPage
-  | Some ImportPage -> false
+  | Some ImportPage
+  | Some SessionPage -> false
   | _ -> true
 
 let view() =
@@ -121,6 +135,7 @@ let view() =
         | Some PlanPage -> App.PlanPage.view()
         | Some ImportPage -> App.Preview.view()
         | Some SettingsPage -> App.SettingsPage.view()
+        | Some SessionPage -> App.SessionDetail.view()
         // Today is the hub; an unparsed URL degrades to it too.
         | _ -> App.Today.view())
     ]

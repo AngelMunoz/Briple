@@ -4,9 +4,14 @@
 
 ### Added
 
+- **Session detail:** a command on the Today app bar that opens the selected day's routine as a plan: the plan week with its RIR target, circuit groups with their round counts and the A1/A2 exercise order, exercise notes, and the guide's rest and circuit-rule lines; back returns to Today.
 - **Settings:** theme (system, light, or dark) and accent color pickers that restyle the app instantly; the choices are remembered on the device.
 - **Settings:** a reset command, behind a confirmation, that restores the default theme and accent and clears every plan and setting stored on the device.
 - **Settings:** an install-app placeholder, disabled until install support arrives.
+
+### Fixed
+
+- **Week:** tapping a week row keeps the selected day; the day view could lose the selection to a stale day-hub notification while the view switched.
 
 ## [0.1.0] - 2026-09-20
 
