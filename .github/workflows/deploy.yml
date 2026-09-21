@@ -44,6 +44,8 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         with:
           node-version: lts/*
+          registry-url: https://npm.pkg.github.com
+          scope: "@angelmunoz"
 
       - uses: actions/setup-dotnet@v4
         if: steps.check_tag.outputs.exists == 'false'
@@ -52,8 +54,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
         if: steps.check_tag.outputs.exists == 'false'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         if: steps.check_tag.outputs.exists == 'false'
