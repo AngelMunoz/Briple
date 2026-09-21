@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Settings:** the install command opens the browser's native install dialog whenever the browser has one to offer; the install section stays hidden the rest of the time (already installed, prompt already spent, or a browser without install prompts).
+
 ## [1.0.0] - 2026-09-21
 
 ### Added

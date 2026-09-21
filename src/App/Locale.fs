@@ -171,7 +171,7 @@ let esStrings = {
   ResetConfirmAccept = "Restablecer"
   InstallHeading = "Instalar"
   InstallBody =
-    "La instalación en el dispositivo llegará en una próxima versión."
+    "Instala Briple en tu dispositivo para abrirlo como una aplicación, sin el navegador."
   InstallApp = "Instalar aplicación"
   ToastReset = "Ajustes restablecidos"
   DetailMenu = "Detalle de sesión"
@@ -262,7 +262,8 @@ let enStrings = {
     "Every plan and setting stored on this device will be deleted."
   ResetConfirmAccept = "Reset"
   InstallHeading = "Install"
-  InstallBody = "Installing the app on your device arrives in a future update."
+  InstallBody =
+    "Install Briple on your device to open it like an app, without the browser."
   InstallApp = "Install app"
   ToastReset = "Settings restored"
   DetailMenu = "Session detail"

@@ -9,6 +9,7 @@ open Metrino.Ripple
 open App.Locale
 open App.Theme
 open App.Chrome
+open App.Pwa
 open App.State
 
 /// One radio per theme choice. The group name makes metrino treat the three
@@ -101,18 +102,25 @@ let resetSection(s: Strings) : DomItem =
     ]
   ]
 
-/// Placeholder for the install flow (service worker slice): the command is
-/// visible but disabled until an install prompt can exist.
+/// The section exists only while App.Pwa holds a prompt to offer; handing it
+/// over opens the native install dialog and the section goes away.
 let inline installSection(s: Strings) : DomItem =
-  Html.div [
-    heading s.InstallHeading
-    Html.p [
-      attr.className "body"
-      attr.style "opacity:0.7;margin:0"
-      Html.text s.InstallBody
-    ]
-    Html.metroButton [ attr.disabled true; Html.text s.InstallApp ]
-  ]
+  Html.show(
+    (fun () -> installAvailable.Value),
+    fun () ->
+      Html.div [
+        heading s.InstallHeading
+        Html.p [
+          attr.className "body"
+          attr.style "opacity:0.7;margin:0"
+          Html.text s.InstallBody
+        ]
+        Html.metroButton [
+          on.click(fun _ -> promptInstall())
+          Html.text s.InstallApp
+        ]
+      ]
+  )
 
 let view() : DomItem =
   let s = strings()

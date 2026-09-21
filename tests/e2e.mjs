@@ -34,9 +34,10 @@ if (!browser) {
 const failures = [];
 const pageErrors = [];
 
-async function scenario(name, locale, run) {
+async function scenario(name, locale, run, initScript) {
     const context = await browser.newContext({ locale });
     const page = await context.newPage();
+    if (initScript) await page.addInitScript(initScript);
     page.on('pageerror', (err) => pageErrors.push(`${name}: ${err.message}`));
     page.on('console', (msg) => {
         const url1 = msg.location() ? msg.location().url : '';
@@ -587,6 +588,46 @@ await scenario('Session detail command hides on rest days', 'es-ES', async (page
     );
     await see(page, 'Descanso · próxima sesión: miércoles, Full Body B', 'rest-day line still present');
 });
+
+// 22. Install: with a `beforeinstallprompt` faked the way Chromium fires it
+//     on an installable page, the Settings install command appears, and
+//     tapping it hands the captured prompt to the browser (the fake records
+//     the handover). The section then goes away: the prompt is spent.
+await scenario(
+    'Settings install command hands over the browser prompt',
+    'es-ES',
+    async (page) => {
+        await page.getByText('Probar el plan de ejemplo').click();
+        await commitPreview(page);
+        await page.getByRole('button', { name: 'More options' }).click();
+        await page.getByText('Ajustes').click();
+        await page.waitForURL(/#\/settings/, { timeout: 8000 });
+        await see(page, 'Instalar aplicación', 'install command present');
+        await page.getByText('Instalar aplicación').click();
+        await page.waitForFunction(() => window.__installPrompted === true, {
+            timeout: 8000,
+        });
+        await page
+            .getByText('Instalar aplicación')
+            .waitFor({ state: 'hidden', timeout: 8000 });
+    },
+    // Chromium fires the event once per visit; the app listener may attach a
+    // beat after load, so the fake re-fires until the prompt is spent.
+    () => {
+        let prompted = false;
+        const dispatch = () => {
+            if (prompted) return;
+            const event = new Event('beforeinstallprompt');
+            event.prompt = () => {
+                prompted = true;
+                window.__installPrompted = true;
+                return Promise.resolve();
+            };
+            window.dispatchEvent(event);
+        };
+        window.addEventListener('load', () => setInterval(dispatch, 300));
+    },
+);
 
 await browser.close();
 await server.close();

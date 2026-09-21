@@ -32,6 +32,10 @@ Promise.allSettled [
 ]
 |> Promise.start
 
+// The install listeners arm before the store read runs: an early
+// beforeinstallprompt must not slip past boot.
+App.Pwa.init()
+
 promise {
   // The theme applies before anything mounts, so the first paint already
   // carries the stored choice.
