@@ -24,7 +24,8 @@ val inline schemeLine: exercise: Ejercicio -> string option
 /// The accent-bordered notice surface: a title line and quiet detail lines.
 val inline noticeCard: title: string -> lines: string list -> DomItem
 
-/// Field + inline roller for a DateOnly. The field shows the localized date;
-/// a tap expands the roller. Roller changes write the var and call `onChanged`.
-val inline anchorField:
+/// Field + inline calendar for a DateOnly. The field shows the localized
+/// date; a tap expands the calendar. A picked date writes the var and calls
+/// `onChanged`.
+val anchorField:
   anchor: Var<DateOnly> -> onChanged: (DateOnly -> unit) -> DomItem

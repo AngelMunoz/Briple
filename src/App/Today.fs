@@ -384,6 +384,17 @@ let inline chevronButton (direction: string) (step: int) =
     Html.metroIcon [ attr.icon direction ]
   ]
 
+// The Week view's "Hoy" jump, mirrored in the Day hub: after a few chevron
+// weeks the user cannot tell whether the shown week is current. A tap
+// writes today; the same-week scroll or the week rebuild opens on it.
+let inline todayButton(s: Strings) =
+  Html.button [
+    attr.className "day-chevron"
+    attr.style "min-width:auto;padding:0 8px"
+    on.click(fun _ -> setSelectedDate(today()))
+    Html.span [ attr.className "caption"; Html.text s.Hoy ]
+  ]
+
 let inline daySection
   (s: Strings)
   (plan: Plan option)
@@ -423,6 +434,7 @@ let inline dayHubView
     Html.div [
       attr.style "display:flex;justify-content:center;gap:16px;padding:4px 0"
       chevronButton "back" -1
+      todayButton s
       chevronButton "forward" 1
     ]
     Html.metroHub [

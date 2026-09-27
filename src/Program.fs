@@ -17,15 +17,15 @@ registerMetroAppBarButton()
 registerMetroHub()
 registerMetroHubSection()
 registerMetroIcon()
+registerMetroCalendar()
 registerMetroToast()
 
-// The lazily registered components (flyout, date roller, expander, the
-// Settings page's radio buttons and confirm dialog) are not part of the
-// first paint: their imports load in their own chunks, and a tag defined
-// after its node exists upgrades that node in place.
+// The lazily registered components (flyout, expander, the Settings page's
+// radio buttons and confirm dialog) are not part of the first paint: their
+// imports load in their own chunks, and a tag defined after its node exists
+// upgrades that node in place.
 Promise.allSettled [
   registerMetroMenuFlyoutDynamic()
-  registerMetroDatePickerRollerDynamic()
   registerMetroExpanderDynamic()
   registerMetroRadioButtonDynamic()
   registerMetroMessageDialogDynamic()

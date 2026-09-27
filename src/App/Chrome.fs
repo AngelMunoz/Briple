@@ -62,13 +62,14 @@ let inline tryIso(value: string) =
   with _ ->
     None
 
-/// Field + inline roller for a DateOnly. The field shows the localized date;
-/// a tap expands the roller. Roller changes write the var and call `onChanged`.
-let inline anchorField
+/// Field + inline calendar for a DateOnly. The field shows the localized
+/// date; a tap expands the calendar. A picked date writes the var and calls
+/// `onChanged`.
+let anchorField
   (anchor: Var<DateOnly>)
   (onChanged: DateOnly -> unit)
   : DomItem =
-  let rollerOpen = Var.create false
+  let calendarOpen = Var.create false
 
   Html.div [
     attr.style
@@ -76,7 +77,7 @@ let inline anchorField
     Html.button [
       attr.className "day-chevron"
       attr.style "min-width:auto;min-height:34px;padding:0 12px"
-      on.click(fun _ -> rollerOpen.Value <- not rollerOpen.Value)
+      on.click(fun _ -> calendarOpen.Value <- not calendarOpen.Value)
       Html.span [
         attr.className "body"
         Html.text(fun () -> dayMonth(locale(), toDateTime anchor.Value))
@@ -84,14 +85,16 @@ let inline anchorField
       Html.metroIcon [ attr.icon "chevron-down" ]
     ]
     Html.show(
-      (fun () -> rollerOpen.Value),
+      (fun () -> calendarOpen.Value),
       fun () ->
-        Html.metroDatePickerRoller [
-          attr.custom("value", Iso.ofDateOnly anchor.Value)
-          attr.custom("min-year", string(anchor.Value.Year - 5))
-          attr.custom("max-year", string(anchor.Value.Year + 5))
-          on.valueChanged(fun change ->
-            match tryIso change.value with
+        Html.metroCalendar [
+          attr.selectedDate(Iso.ofDateOnly anchor.Value)
+          attr.displayDate(Iso.ofDateOnly anchor.Value)
+          attr.firstDayOfWeek 1.0
+          on.dateSelected(fun selection ->
+            calendarOpen.Value <- false
+
+            match tryIso selection.value with
             | Some date ->
               anchor.Value <- date
               onChanged date

@@ -394,10 +394,10 @@ await scenario('Preview shows parse warnings', 'es-ES', async (page) => {
     await see(page, 'Full Body A', 'known days still project');
 });
 
-// 16. Re-anchor: the Plan page roller writes a new anchor and every view
+// 16. Re-anchor: the Plan page calendar writes a new anchor and every view
 //     re-projects - Today sits before the new start, so it shows the quiet
-//     before-plan line. The roller's gesture is a drag: one item height
-//     (40 px) up moves the day one step forward.
+//     before-plan line. The calendar day cells carry ISO aria-labels, so
+//     the pick targets the cell directly.
 await scenario('Re-anchor from the Plan page re-projects', 'es-ES', async (page) => {
     await page.getByText('Probar el plan de ejemplo').click();
     await commitPreview(page);
@@ -408,14 +408,9 @@ await scenario('Re-anchor from the Plan page re-projects', 'es-ES', async (page)
     await see(page, 'Inicio del plan', 'anchor row');
     await see(page, '14 de septiembre', 'current anchor on the field');
     await page.getByText('14 de septiembre').click();
-    const dayColumn = page.locator('metro-date-picker-roller .picker-column--day');
-    const box = await dayColumn.boundingBox();
-    const cx = box.x + box.width / 2;
-    const cy = box.y + box.height / 2;
-    await page.mouse.move(cx, cy);
-    await page.mouse.down();
-    await page.mouse.move(cx, cy - 40, { steps: 4 });
-    await page.mouse.up();
+    const day = page.locator('metro-calendar button[aria-label="2026-09-15"]');
+    await day.waitFor({ timeout: 8000 });
+    await day.click();
     await see(page, '15 de septiembre', 'anchor re-projected on the field');
     await page.locator('header metro-hyperlink-button').first().click();
     await see(page, 'El plan aún no empieza.', 'today sits before the new anchor');
@@ -628,6 +623,29 @@ await scenario(
         window.addEventListener('load', () => setInterval(dispatch, 300));
     },
 );
+
+// 23. Day hub: the Hoy jump returns from a future week. The user pages two
+//     weeks ahead through the Week view's chevrons, switches to Day, and
+//     the week-keyed rebuild opens on that Monday; Hoy then returns to
+//     today with its section selected.
+await scenario('Day hub Hoy jump returns to today from another week', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await see(page, 'Full Body A', 'Monday rendered');
+    await page.getByRole('tab', { name: 'Week' }).click();
+    const weekForward = page
+        .locator('metro-pivot-item[header="Week"] button.day-chevron:has(metro-icon[icon="forward"])')
+        .first();
+    await weekForward.click();
+    await weekForward.click();
+    await see(page, '28 de septiembre', 'week header moved two weeks ahead');
+    await page.getByRole('tab', { name: 'Day' }).click();
+    await seeSelectedDay(page, 'lun', 'day hub opened on the future Monday');
+    await see(page, '28 de septiembre', 'date block on the future Monday');
+    await page.locator('metro-pivot-item[header="Day"] button.day-chevron:has-text("Hoy")').click();
+    await seeSelectedDay(page, 'lun', 'Hoy returned to today');
+    await see(page, '14 de septiembre', 'date block back on today');
+});
 
 await browser.close();
 await server.close();

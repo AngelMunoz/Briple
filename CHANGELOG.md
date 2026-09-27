@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Today:** the day navigator gains a "Hoy" jump; after paging weeks away it returns to today with one tap.
+- **Shell:** the browser's install dialog shows app screenshots on Android: Today in light and dark themes, the week view, switching between plan variants, and Settings.
+
+### Changed
+
+- **Plan:** the start-date picker is a calendar grid instead of a roller, in the import preview and on the Plan page; picking a day applies it at once.
+
 ## [1.0.1] - 2026-09-21
 
 ### Fixed
