@@ -7,7 +7,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       deployments: write
       packages: read
     name: Deploy to Cloudflare Pages
@@ -74,3 +74,14 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # The deploy step fails the job on error, so this runs only after a
+      # successful deploy; the next dispatch of the same version stops at
+      # the tag check.
+      - name: Tag the release
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.extract.outputs.version }}" -m "Briple v${{ steps.extract.outputs.version }}" "${{ github.sha }}"
+          git push origin "v${{ steps.extract.outputs.version }}"
