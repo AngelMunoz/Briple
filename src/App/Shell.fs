@@ -34,16 +34,16 @@ module Dom =
 // which the scrolling region reserves. The observer follows expansion and
 // font scaling.
 
-let mutable private appBarElement: HTMLElement = Unchecked.defaultof<_>
-let mutable private appBarObserver: obj = null
+let mutable appBarElement: HTMLElement = Unchecked.defaultof<_>
+let mutable appBarObserver: obj = null
 
-let private measureAppBar() =
+let measureAppBar() =
   if not(isNull appBarElement) then
     Dom.setRootVar
       "--app-bar-height"
       $"{appBarElement.getBoundingClientRect().height}px"
 
-let private bindAppBar(el: HTMLElement) =
+let bindAppBar(el: HTMLElement) =
   appBarElement <- el
 
   if not(isNull el) then
@@ -56,7 +56,7 @@ let private bindAppBar(el: HTMLElement) =
 // The sheet's own success needs no app feedback; a clipboard fallback does,
 // and a failure toasts once. The empty error text means "nothing to add":
 // the toast shows the localized failure line alone.
-let private toastShareResult (s: Strings) (result: ShareResult) : unit =
+let toastShareResult (s: Strings) (result: ShareResult) : unit =
   let show (message: string) (severity: Metrino.Ripple.Severity) : unit =
     State.toastHost.show {
       title = None
@@ -81,7 +81,7 @@ let private toastShareResult (s: Strings) (result: ShareResult) : unit =
 
     show message Metrino.Ripple.Error
 
-let private shareSelectedDay(s: Strings) : unit =
+let shareSelectedDay(s: Strings) : unit =
   match parsed.Value, activeImport.Value with
   | Some parsedPlan, Some import ->
     let plan = parsedPlan.Plan

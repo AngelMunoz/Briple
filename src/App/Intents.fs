@@ -25,10 +25,10 @@ type LaunchQueue =
   abstract setConsumer: consumer: (LaunchParams -> unit) -> unit
 
 [<Global("window.launchQueue")>]
-let private launchQueue: LaunchQueue = jsNative
+let launchQueue: LaunchQueue = jsNative
 
 [<Emit("'launchQueue' in window && (typeof LaunchParams === 'undefined' || 'files' in LaunchParams.prototype)")>]
-let private launchHandlingSupported() : bool = jsNative
+let launchHandlingSupported() : bool = jsNative
 
 // Cache Storage, kept to the handoff surface the service worker writes.
 // `open` and `match` are F# keywords, so the members carry their JS names
@@ -46,32 +46,32 @@ type HandoffCacheStorage =
   abstract open': name: string -> JS.Promise<HandoffCache>
 
 [<Global("caches")>]
-let private caches: HandoffCacheStorage option = jsNative
+let caches: HandoffCacheStorage option = jsNative
 
 // Web Share Level 2: the Navigator package binds share, canShare, and
 // clipboard, but its canShare takes no payload, so the file probe needs the
 // data-carrying call.
 [<Emit("navigator.canShare($0)")>]
-let private canSharePayload(payload: obj) : bool = jsNative
+let canSharePayload(payload: obj) : bool = jsNative
 
 [<Emit("'share' in navigator")>]
-let private shareAvailable() : bool = jsNative
+let shareAvailable() : bool = jsNative
 
 // The sheet's cancel rejects with an AbortError; every other rejection is a
 // failure the fallbacks answer.
 [<Emit("$0 != null && $0.name === 'AbortError'")>]
-let private isAbort(error: exn) : bool = jsNative
+let isAbort(error: exn) : bool = jsNative
 
 // The download idiom: one object URL, one synthetic anchor, one click.
 [<Emit("(() => { const blob = new Blob([$1], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = $0; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); })()")>]
-let private downloadAnchor (name: string) (text: string) : unit = jsNative
+let downloadAnchor (name: string) (text: string) : unit = jsNative
 
 // The handoff entry is one text response: the first line is the file name,
 // the remainder is the plan text. Keep the format and both literals in sync
 // with src/sw.ts.
-let private handoffCacheName = "briple-handoff"
+let handoffCacheName = "briple-handoff"
 
-let private handoffKey = "/__pending-share"
+let handoffKey = "/__pending-share"
 
 /// How a share attempt ended; the signature carries the contract.
 type ShareResult =
@@ -85,7 +85,7 @@ let downloadText (name: string) (text: string) : unit = downloadAnchor name text
 
 // --- File launches (H1) -----------------------------------------------------
 
-let private armLaunchConsumer() : unit =
+let armLaunchConsumer() : unit =
   if launchHandlingSupported() then
     launchQueue.setConsumer(fun launchParams ->
       match launchParams.files with
@@ -103,7 +103,7 @@ let private armLaunchConsumer() : unit =
 // `src` and `name` parameters. The param strip runs first, so a reload never
 // re-enters a link.
 
-let private defaultNameFor(src: string) : string =
+let defaultNameFor(src: string) : string =
   try
     let url = URL.Create src
 
@@ -114,7 +114,7 @@ let private defaultNameFor(src: string) : string =
   with _ ->
     "plan.briple"
 
-let private importFromSrc (src: string) (name: string option) : unit =
+let importFromSrc (src: string) (name: string option) : unit =
   promise {
     let! response = Fetch.fetch src []
     let! text = response.text()
@@ -126,7 +126,7 @@ let private importFromSrc (src: string) (name: string option) : unit =
   |> Promise.catch(fun error -> importError.Value <- Some(string error))
   |> Promise.start
 
-let private routeLink(value: string) : unit =
+let routeLink(value: string) : unit =
   // A deep link must never break the boot: every failure degrades to the
   // plain start. The path guard covers hosts that report '//' as the
   // pathname, which replaceState would read as a protocol-relative URL.
@@ -160,7 +160,7 @@ let private routeLink(value: string) : unit =
 
 // --- Share handoff (H3) -----------------------------------------------------
 
-let private ofHandoff(entry: string) : (string * string) option =
+let ofHandoff(entry: string) : (string * string) option =
   match entry.IndexOf '\n' with
   | -1 -> None
   | index ->
@@ -168,7 +168,7 @@ let private ofHandoff(entry: string) : (string * string) option =
     let text = entry.Substring(index + 1)
     if name = "" || text = "" then None else Some(name, text)
 
-let private readHandoff() : unit =
+let readHandoff() : unit =
   promise {
     match caches with
     | None -> ()
@@ -203,13 +203,13 @@ let init() : unit =
 // The payloads are structural objects against the Navigator package's typed
 // `share`; the text payload rides ShareData, the file payload adds `files`.
 
-let private sharePayloadFile (title: string) (file: File) : ShareData =
+let sharePayloadFile (title: string) (file: File) : ShareData =
   unbox {| title = title; files = [| file |] |}
 
-let private sharePayloadText (title: string) (text: string) : ShareData =
+let sharePayloadText (title: string) (text: string) : ShareData =
   unbox {| title = title; text = text |}
 
-let private copyFallback(text: string) : JS.Promise<ShareResult> =
+let copyFallback(text: string) : JS.Promise<ShareResult> =
   match navigator.clipboard with
   | Some clipboard -> promise {
       try

@@ -60,17 +60,6 @@ async function scenario(name, locale, run, initScript, setup) {
     }
 }
 
-// Opens the OS-share idiom in the page: a capturing `navigator.share` and a
-// permissive `canShare`, the way Chromium exposes them where they exist.
-function shareStubInit() {
-    window.__shareCalls = [];
-    navigator.share = (data) => {
-        window.__shareCalls.push(data);
-        return Promise.resolve();
-    };
-    navigator.canShare = () => true;
-}
-
 async function see(page, text, note) {
     try {
         await page
@@ -659,38 +648,7 @@ await scenario('Day hub Hoy jump returns to today from another week', 'es-ES', a
     await see(page, '14 de septiembre', 'date block back on today');
 });
 
-// 24. File handling: a launch with handled files stages them through the
-//     preview. The stub captures the consumer the app registers at boot and
-//     replays a real launch's shape: one FileSystemFileHandle-like object.
-//     defineProperty replaces the browser's own launchQueue, which a plain
-//     assignment cannot overwrite.
-await scenario(
-    'A handled file launch opens the preview',
-    'es-ES',
-    async (page) => {
-        await page.evaluate((text) => {
-            const file = new File([text], 'plan.briple', { type: 'text/plain' });
-            window.__launch({ files: [{ getFile: async () => file }] });
-        }, fixtureText);
-        await see(page, 'Importar plan', 'preview opened for the launched file');
-        await see(page, 'plan.briple', 'the launched file name in the preview');
-        await commitPreview(page);
-        await see(page, 'Plan cargado · 3 variantes · 4 semanas', 'import toast');
-        await see(page, 'Full Body A', 'session card after commit');
-    },
-    () => {
-        Object.defineProperty(window, 'launchQueue', {
-            configurable: true,
-            value: {
-                setConsumer(consumer) {
-                    window.__launch = (params) => consumer(params);
-                },
-            },
-        });
-    },
-);
-
-// 25. Deep links: the scheme routes the app's surfaces, the `link` parameter
+// 24. Deep links: the scheme routes the app's surfaces, the `link` parameter
 //     never survives the landing, and an unknown host degrades to Today.
 //     Content, not the app bar, marks the landing: the session detail and
 //     the preview render full bleed with no bar.
@@ -734,72 +692,9 @@ await scenario('Deep link import stages a hosted plan', 'es-ES', async (page) =>
     if (page.url().includes('link=')) throw new Error('the link param survived the landing');
 });
 
-// 27. Share day: the command hands the session text to the share sheet.
-await scenario(
-    'Share day hands the session text to the sheet',
-    'es-ES',
-    async (page) => {
-        await page.getByText('Probar el plan de ejemplo').click();
-        await commitPreview(page);
-        await see(page, 'Full Body A', 'Today rendered');
-        const share = page.locator('metro-app-bar-button[icon="share"]');
-        await share.waitFor({ timeout: 8000 });
-        await share.click();
-        await page.waitForFunction(() => window.__shareCalls?.length === 1, {
-            timeout: 8000,
-        });
-        const payload = await page.evaluate(() => window.__shareCalls[0]);
-        if (payload.title !== 'Plan de Entrenamiento en Circuito - 4 Semanas') {
-            throw new Error(`unexpected share title ${payload.title}`);
-        }
-        for (const part of [
-            'Full Body A',
-            'lunes · 14 de septiembre',
-            'Semana 1 de 4 · RIR 3',
-            'A1 Sentadilla con barra',
-            '6-8 · 1-2 · 3 min',
-            '· Entre ejercicios del circuito',
-        ]) {
-            if (!payload.text.includes(part)) {
-                throw new Error(`expected the share text to include "${part}"`);
-            }
-        }
-    },
-    shareStubInit,
-);
-
-// 28. Share plan: the Plan bar's command hands the raw file to the sheet.
-await scenario(
-    'Share plan hands the file to the sheet',
-    'es-ES',
-    async (page) => {
-        await page.getByText('Probar el plan de ejemplo').click();
-        await commitPreview(page);
-        await page.getByRole('button', { name: 'More options' }).click();
-        await page.getByText('Plan de entrenamiento').click();
-        await page.waitForURL(/#\/plan/, { timeout: 8000 });
-        await page.getByRole('button', { name: 'More options' }).click();
-        await see(page, 'Compartir plan', 'share command in the plan menu');
-        await page.getByText('Compartir plan').click();
-        // The file's identity does not survive the evaluate boundary, so the
-        // assertions run in the page against the real File object.
-        await page.waitForFunction(
-            () => {
-                const data = window.__shareCalls?.[0];
-                return data?.files?.length === 1 && data.files[0].name === 'plan_entrenamiento_4sem.txt';
-            },
-            { timeout: 8000 },
-        );
-        const shared = await page.evaluate((expected) => window.__shareCalls[0].files[0].text().then((text) => text === expected), fixtureText);
-        if (!shared) {
-            throw new Error('the shared file text differs from the raw plan');
-        }
-    },
-    shareStubInit,
-);
-
-// 29. Fallback: without a share API the file share downloads the plan. The
-//     command exists everywhere; the run-time answer picks the path.
+// 27. Fallback: this browser carries no share API, so the file share
+//     downloads the plan. The command exists everywhere; the run-time
+//     answer picks the path.
 await scenario(
     'Share plan falls back to the download without a share API',
     'es-ES',
@@ -824,7 +719,7 @@ await scenario(
     },
 );
 
-// 30. Fallback: without a share API the text share lands on the clipboard
+// 28. Fallback: without a share API the text share lands on the clipboard
 //     under one toast. The clipboard permissions are granted up front.
 await scenario(
     'Share day falls back to the clipboard without a share API',

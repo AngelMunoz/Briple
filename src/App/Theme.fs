@@ -211,8 +211,8 @@ let setAccent(value: Accent) : unit = accent.Value <- value
 
 // Created in `init`: the subscriptions apply and persist, so they must not
 // exist while init restores the stored choices.
-let mutable private themeSubscription: System.IDisposable option = None
-let mutable private accentSubscription: System.IDisposable option = None
+let mutable themeSubscription: System.IDisposable option = None
+let mutable accentSubscription: System.IDisposable option = None
 
 let init (storedTheme: string option) (storedAccent: string option) : unit =
   theme.Value <-
