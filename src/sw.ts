@@ -7,6 +7,13 @@ import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 
 declare let self: ServiceWorkerGlobalScope;
 
+// generateSW injected skipWaiting and clientsClaim for registerType
+// autoUpdate; injectManifest does not, so the hand-written worker owns that
+// behavior itself. Without this, a new worker waits for every client to
+// close before it activates, and updates stall behind an open window.
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 

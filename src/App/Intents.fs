@@ -50,8 +50,10 @@ let caches: HandoffCacheStorage option = jsNative
 
 // Web Share Level 2: the Navigator package binds share, canShare, and
 // clipboard, but its canShare takes no payload, so the file probe needs the
-// data-carrying call.
-[<Emit("navigator.canShare($0)")>]
+// data-carrying call. canShare shipped after share (Safari 12-14 carry
+// share without it); a missing probe answers false so the download
+// fallback owns the path instead of a TypeError.
+[<Emit("typeof navigator.canShare === 'function' && navigator.canShare($0)")>]
 let canSharePayload(payload: obj) : bool = jsNative
 
 [<Emit("'share' in navigator")>]
