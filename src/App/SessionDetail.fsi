@@ -39,4 +39,16 @@ val detailGroups: dia: Dia -> CircuitGroup list
 /// page's guide. Empty when the file carries neither key.
 val guideTrailer: plan: Plan -> string list
 
+/// The selected day's session as plain text: title, date caption, plan-week
+/// badge, circuit groups with round counts and order idioms, indented
+/// scheme and note lines, and the guía trailer. No trailing newline. Empty
+/// when the date carries no session.
+val sessionText:
+  strings: App.Locale.Strings ->
+  plan: Plan ->
+  anchor: DateOnly ->
+  view: Genero * string ->
+    date: DateOnly ->
+      string
+
 val view: unit -> DomItem

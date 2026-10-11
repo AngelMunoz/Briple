@@ -33,6 +33,10 @@ val pivotIndex: Var<float>
 
 val importError: Var<string option>
 
+/// The shared metrino toast host. It registers its own `<metro-toast>`
+/// element on the document body at the first `show`.
+val toastHost: Metrino.Ripple.Primitives.ToastHost
+
 /// A parsed import waiting in the preview. Nothing is in the store until
 /// `commitImport` runs.
 type StagedImport = {

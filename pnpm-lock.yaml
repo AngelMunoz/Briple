@@ -175,6 +175,9 @@ importers:
       lit:
         specifier: 3.3.3
         version: 3.3.3
+      workbox-precaching:
+        specifier: 7.4.1
+        version: 7.4.1
     devDependencies:
       '@vite-pwa/assets-generator':
         specifier: 2.0.0

@@ -58,6 +58,65 @@ let inline planBadge (s: Strings) (plan: Plan) (week: int) : string =
   | Some rir -> $"{s.PlanWeek week plan.Semanas} · RIR {rir}"
   | None -> s.PlanWeek week plan.Semanas
 
+let sessionText
+  (strings: Strings)
+  (plan: Plan)
+  (anchor: DateOnly)
+  (view: Genero * string)
+  (date: DateOnly)
+  : string =
+  let (genero, opcionId) = view
+
+  match trySession plan genero opcionId anchor date with
+  | None -> ""
+  | Some dia ->
+    let dt = toDateTime date
+    let weekday = weekdayLong(locale(), dt)
+    let title = dia.Titulo |> Option.defaultValue weekday
+
+    let headerLines = [
+      title
+      $"{weekday} · {dayMonth(locale(), dt)}"
+      yield!
+        planWeek plan anchor date
+        |> Option.map(planBadge strings plan)
+        |> Option.toList
+    ]
+
+    let circuitBlocks =
+      detailGroups dia
+      |> List.map(fun group ->
+        let heading =
+          if group.Vueltas = "" || group.Vueltas = "-" then
+            strings.CircuitHeadingOnly group.Circuito
+          else
+            strings.CircuitHeading group.Circuito group.Vueltas
+
+        let exerciseLines =
+          group.Exercises
+          |> List.collect(fun exercise -> [
+            $"{exercise.Idiom} {exercise.Name}"
+            yield!
+              exercise.Scheme
+              |> Option.toList
+              |> List.map(fun line -> $"   {line}")
+            yield!
+              exercise.Notes
+              |> Option.toList
+              |> List.map(fun line -> $"   {line}")
+          ])
+
+        heading :: exerciseLines |> String.concat "\n")
+
+    let trailerLines = guideTrailer plan |> List.map(fun line -> $"· {line}")
+
+    [
+      yield! headerLines
+      yield! circuitBlocks |> String.concat "\n\n" |> List.singleton
+      yield! trailerLines
+    ]
+    |> String.concat "\n"
+
 let inline header
   (s: Strings)
   (date: DateOnly)

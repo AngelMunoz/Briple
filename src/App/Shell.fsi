@@ -4,7 +4,8 @@ module App.Shell
 // session detail are spokes with back chevrons. The shell owns the fixed
 // app bar and the scrolling content region, so no page can hide its last
 // section behind the bar. The app bar holds commands, never navigation:
-// Today's bar carries the session-detail command plus the Plan / Settings
-// menu items.
+// Today's bar carries the session-detail and day-share commands plus the
+// Plan / Settings menu items; the Plan bar carries export, plan share, and
+// remove.
 
 val view: unit -> Fable.Ripple.Dom.DomItem

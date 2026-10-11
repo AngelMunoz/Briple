@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **Import:** `.briple` plan files open in Briple from the file manager on desktop; the app stages them through the usual preview.
+- **Import:** sharing a plan file or plan text to Briple from another app opens the preview with the shared content; installed apps on Android and Windows list Briple in the share sheet.
+- **Shell:** `web+bripple` deep links open Briple on Today, the Plan page, or the session detail, and `web+bripple://import?src=...` pulls a plan straight from a web address into the preview; an installed app claims the scheme.
+- **Plan:** a share command next to the export command sends the plan file through the device share sheet.
+- **Today:** a share command next to the session-detail command shares the selected day's session as plain text.
+
 ## [1.1.0] - 2026-09-27
 
 ### Added

@@ -47,6 +47,7 @@ promise {
   and! storedView = Briple.Store.getViewState()
   and! storedDate = Briple.Store.getStateRaw "selectedDate"
   App.State.init stored storedView storedDate
+  App.Intents.init()
   Html.mount "root" (App.Shell.view())
 }
 |> Promise.start

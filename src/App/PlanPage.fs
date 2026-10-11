@@ -87,7 +87,7 @@ let inline loadFile(s: Strings) : DomItem list = [
   ]
   Html.input [
     attr.custom("type", "file")
-    attr.custom("accept", ".txt,text/plain")
+    attr.custom("accept", ".txt,.briple,text/plain")
     attr.style "display:none"
     attr.ref(fun el -> fileInput <- el :?> HTMLInputElement)
     on.event(

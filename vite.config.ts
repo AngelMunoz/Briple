@@ -6,6 +6,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
+      // A hand-written worker: the share target POST must reach the fetch
+      // handler; workbox precaching keeps the generated worker's behavior.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: [
         'favicon.ico',
         'pwa-64x64-light.png',
@@ -25,6 +30,35 @@ export default defineConfig({
         theme_color: '#4a00c8',
         background_color: '#000000',
         display: 'standalone',
+        // A repeat launch (file open, deep link) lands in the running
+        // window instead of a new one; the launchQueue consumer re-fires.
+        launch_handler: { client_mode: 'focus-existing' },
+        // Desktop Chromium only: opening a .briple file from the file
+        // manager launches the app and hands it the file.
+        file_handlers: [
+          { action: './', accept: { 'text/plain': ['.briple'] } },
+        ],
+        // The %s token is mandatory; the handled link arrives as the
+        // `link` query value and the app routes it (today, plan, session,
+        // import).
+        protocol_handlers: [
+          { protocol: 'web+bripple', url: './?link=%s' },
+        ],
+        // Installed apps on Android and Windows appear in the share sheet:
+        // the browser POSTs the shared content to the action URL and the
+        // service worker answers it.
+        share_target: {
+          action: './share-target',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            files: [
+              { name: 'plan', accept: ['text/plain', '.briple', '.txt'] },
+            ],
+            text: 'text',
+            title: 'name',
+          },
+        },
         // The rich install UI shows at most 8 narrow screenshots, in array
         // order; keep the strongest ones first.
         screenshots: [

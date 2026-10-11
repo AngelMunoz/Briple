@@ -34,10 +34,11 @@ if (!browser) {
 const failures = [];
 const pageErrors = [];
 
-async function scenario(name, locale, run, initScript) {
+async function scenario(name, locale, run, initScript, setup) {
     const context = await browser.newContext({ locale });
     const page = await context.newPage();
     if (initScript) await page.addInitScript(initScript);
+    if (setup) await setup(context, page);
     page.on('pageerror', (err) => pageErrors.push(`${name}: ${err.message}`));
     page.on('console', (msg) => {
         const url1 = msg.location() ? msg.location().url : '';
@@ -646,6 +647,102 @@ await scenario('Day hub Hoy jump returns to today from another week', 'es-ES', a
     await seeSelectedDay(page, 'lun', 'Hoy returned to today');
     await see(page, '14 de septiembre', 'date block back on today');
 });
+
+// 24. Deep links: the scheme routes the app's surfaces, the `link` parameter
+//     never survives the landing, and an unknown host degrades to Today.
+//     Content, not the app bar, marks the landing: the session detail and
+//     the preview render full bleed with no bar.
+const linkUrl = (inner) => `${url}?link=${encodeURIComponent(inner)}`;
+const mounted = (page) => page.waitForFunction(() => (document.querySelector('#root')?.childElementCount ?? 0) > 0, { timeout: 15000 });
+await scenario('Deep links route today, plan, and session', 'es-ES', async (page) => {
+    await page.goto(linkUrl('web+bripple://nosuch'));
+    await mounted(page);
+    await see(page, 'Tu calendario está vacío.', 'unknown host lands on Today');
+    if (page.url().includes('link=')) throw new Error('the link param survived the landing');
+    await page.goto(linkUrl('web+bripple://plan'));
+    await mounted(page);
+    await page.waitForURL(/#\/plan/, { timeout: 8000 });
+    await see(page, 'Carga un archivo de plan', 'plan page empty state with no plan');
+    await page.goto(linkUrl('web+bripple://session'));
+    await mounted(page);
+    if (page.url().includes('#/session')) {
+        throw new Error('session deep link opened a blank detail without a plan');
+    }
+    await see(page, 'Tu calendario está vacío.', 'session falls back to Today without a plan');
+    // With a plan loaded the same link opens the selected day's detail.
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await page.goto(linkUrl('web+bripple://session'));
+    await mounted(page);
+    await page.waitForURL(/#\/session/, { timeout: 8000 });
+    await see(page, 'Circuito A · 4 vueltas', 'session detail from the deep link');
+});
+
+// 26. Deep link import: `src` names a hosted plan file; the app fetches it
+//     and stages it through the preview under the link's name.
+await scenario('Deep link import stages a hosted plan', 'es-ES', async (page) => {
+    const src = new URL('/samples/plan_entrenamiento_4sem.txt', url).href;
+    const inner = `web+bripple://import?src=${encodeURIComponent(src)}&name=plan.briple`;
+    await page.goto(`${url}?link=${encodeURIComponent(inner)}`);
+    await see(page, 'Importar plan', 'preview opened for the fetched plan');
+    await see(page, 'plan.briple', 'the link name in the preview');
+    await see(page, 'Plan de Entrenamiento en Circuito - 4 Semanas', 'the fetched plan title');
+    await commitPreview(page);
+    await see(page, 'Full Body A', 'session card after commit');
+    if (page.url().includes('link=')) throw new Error('the link param survived the landing');
+});
+
+// 27. Fallback: this browser carries no share API, so the file share
+//     downloads the plan. The command exists everywhere; the run-time
+//     answer picks the path.
+await scenario(
+    'Share plan falls back to the download without a share API',
+    'es-ES',
+    async (page) => {
+        await page.getByText('Probar el plan de ejemplo').click();
+        await commitPreview(page);
+        await page.getByRole('button', { name: 'More options' }).click();
+        await page.getByText('Plan de entrenamiento').click();
+        await page.waitForURL(/#\/plan/, { timeout: 8000 });
+        const downloadPromise = page.waitForEvent('download');
+        await page.getByRole('button', { name: 'More options' }).click();
+        await page.getByText('Compartir plan').click();
+        const download = await downloadPromise;
+        if (download.suggestedFilename() !== 'plan_entrenamiento_4sem.txt') {
+            throw new Error(`unexpected download name ${download.suggestedFilename()}`);
+        }
+        const { readFileSync } = await import('node:fs');
+        const text = readFileSync(await download.path(), 'utf8');
+        if (text !== fixtureText) {
+            throw new Error('the downloaded text differs from the raw plan');
+        }
+    },
+);
+
+// 28. Fallback: without a share API the text share lands on the clipboard
+//     under one toast. The clipboard permissions are granted up front.
+await scenario(
+    'Share day falls back to the clipboard without a share API',
+    'es-ES',
+    async (page) => {
+        await page.getByText('Probar el plan de ejemplo').click();
+        await commitPreview(page);
+        const share = page.locator('metro-app-bar-button[icon="share"]');
+        await share.waitFor({ timeout: 8000 });
+        await share.click();
+        await see(page, 'Copiado al portapapeles', 'clipboard toast');
+        const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+        for (const part of ['Full Body A', 'Semana 1 de 4 · RIR 3', 'A1 Sentadilla con barra']) {
+            if (!clipboard.includes(part)) {
+                throw new Error(`expected the clipboard text to include "${part}"`);
+            }
+        }
+    },
+    null,
+    async (context) => {
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    },
+);
 
 await browser.close();
 await server.close();

@@ -23,6 +23,8 @@
     <Compile Include="App\State.fs" />
     <Compile Include="App\Pwa.fsi" />
     <Compile Include="App\Pwa.fs" />
+    <Compile Include="App\Intents.fsi" />
+    <Compile Include="App\Intents.fs" />
     <Compile Include="App\Chrome.fsi" />
     <Compile Include="App\Chrome.fs" />
     <Compile Include="App\Preview.fsi" />
@@ -41,8 +43,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Fable.Browser.Blob" Version="1.4.0" />
     <PackageReference Include="Fable.Browser.IndexedDB" Version="2.2.0" />
     <PackageReference Include="Fable.Browser.Navigator" Version="2.5.0" />
+    <PackageReference Include="Fable.Browser.Url" Version="1.4.0" />
+    <PackageReference Include="Fable.Fetch" Version="2.7.0" />
     <PackageReference Include="Fable.Promise" Version="3.2.1" />
     <PackageReference Include="Fable.Ripple" Version="1.0.0-beta.1" />
     <PackageReference Include="Fable.Ripple.Dom" Version="1.0.0-beta.1" />

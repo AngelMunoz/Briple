@@ -12,6 +12,8 @@ open Metrino.Ripple
 open Browser.Types
 open App.Chrome
 open App.Locale
+open App.Intents
+open App.SessionDetail
 open App.State
 
 // The raw emits live in a nested module the signature file does not declare:
@@ -26,25 +28,22 @@ module Dom =
   [<Emit("document.documentElement.style.setProperty($0, $1)")>]
   let setRootVar (name: string) (value: string) : unit = jsNative
 
-  [<Emit("(() => { const blob = new Blob([$1], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = $0; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); })()")>]
-  let downloadText (name: string) (text: string) : unit = jsNative
-
 // --- Fixed app bar ----------------------------------------------------------
 // metrino pins the bar to the viewport bottom, so it takes no layout space.
 // Every mounted bar is measured; the height lands in `--app-bar-height`,
 // which the scrolling region reserves. The observer follows expansion and
 // font scaling.
 
-let mutable private appBarElement: HTMLElement = Unchecked.defaultof<_>
-let mutable private appBarObserver: obj = null
+let mutable appBarElement: HTMLElement = Unchecked.defaultof<_>
+let mutable appBarObserver: obj = null
 
-let private measureAppBar() =
+let measureAppBar() =
   if not(isNull appBarElement) then
     Dom.setRootVar
       "--app-bar-height"
       $"{appBarElement.getBoundingClientRect().height}px"
 
-let private bindAppBar(el: HTMLElement) =
+let bindAppBar(el: HTMLElement) =
   appBarElement <- el
 
   if not(isNull el) then
@@ -54,11 +53,56 @@ let private bindAppBar(el: HTMLElement) =
     Dom.observeResize appBarObserver el
     measureAppBar()
 
+// The sheet's own success needs no app feedback; a clipboard fallback does,
+// and a failure toasts once. The empty error text means "nothing to add":
+// the toast shows the localized failure line alone.
+let toastShareResult (s: Strings) (result: ShareResult) : unit =
+  let show (message: string) (severity: Metrino.Ripple.Severity) : unit =
+    State.toastHost.show {
+      title = None
+      message = message
+      severity = Some severity
+      duration = Some 4000.0
+    }
+    |> ignore
+
+  match result with
+  | Shared
+  | Downloaded
+  | Cancelled -> ()
+  | Copied -> show s.ToastCopied Metrino.Ripple.Success
+
+  | Failed error ->
+    let message =
+      if error = "" then
+        s.ShareFailed
+      else
+        $"{s.ShareFailed} · {error}"
+
+    show message Metrino.Ripple.Error
+
+let shareSelectedDay(s: Strings) : unit =
+  match parsed.Value, activeImport.Value with
+  | Some parsedPlan, Some import ->
+    let plan = parsedPlan.Plan
+
+    Intents.shareText
+      plan.Titulo
+      (SessionDetail.sessionText
+        s
+        plan
+        import.Anchor
+        view.Value
+        selectedDate.Value)
+    |> Promise.iter(toastShareResult s)
+  | _ -> ()
+
 let todayBar(s: Strings) =
   Html.metroAppBar [
     attr.ref(fun el -> bindAppBar el)
-    // Primary command: the session detail for the selected day. The show
-    // wrapper keeps it off the bar on rest days and the quiet states.
+    // Primary commands: the session detail and the day share for the
+    // selected day. The show wrapper keeps both off the bar on rest days
+    // and the quiet states.
     Html.show(
       App.Today.hasSelectedSession,
       fun () ->
@@ -67,6 +111,16 @@ let todayBar(s: Strings) =
           attr.label s.DetailMenu
           attr.custom("aria-label", s.DetailMenu)
           on.click(fun _ -> goTo SessionPage)
+        ]
+    )
+    Html.show(
+      App.Today.hasSelectedSession,
+      fun () ->
+        Html.metroAppBarButton [
+          attr.icon "share"
+          attr.label s.ShareDay
+          attr.custom("aria-label", s.ShareDay)
+          on.click(fun _ -> shareSelectedDay s)
         ]
     )
     Html.metroAppBarButton [
@@ -93,7 +147,18 @@ let planBar(s: Strings) =
       on.click(fun _ ->
         activeImport.Value
         |> Option.iter(fun import ->
-          Dom.downloadText import.FileName import.Raw))
+          Intents.downloadText import.FileName import.Raw))
+    ]
+    Html.metroAppBarButton [
+      attr.custom("slot", "menu")
+      attr.icon "share"
+      attr.label s.SharePlan
+      on.click(fun _ ->
+        match parsed.Value, activeImport.Value with
+        | Some parsedPlan, Some import ->
+          Intents.shareFile parsedPlan.Plan.Titulo import.FileName import.Raw
+          |> Promise.iter(toastShareResult s)
+        | _ -> ())
     ]
     Html.metroAppBarButton [
       attr.custom("slot", "menu")
