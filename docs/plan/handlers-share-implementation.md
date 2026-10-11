@@ -1,6 +1,6 @@
 # Implementation Plan - File handling, deep links, share target, share (H1 to H5)
 
-> Status: proposed. Not started.
+> Status: implemented. Gates at review: builds clean, 31 browser tests, 30 e2e scenarios, 4 service-worker scenarios, manifest carries the four new members, fantomas clean.
 > Style: Simplified Technical English (ASD-STE100). Procedural sentences: 20 words or fewer. Descriptive sentences: 25 words or fewer.
 
 ## 1. Slice H1 - `.briple` file handling
@@ -24,7 +24,7 @@ file_handlers: [
 
 ### 1.3 The `App.Intents` module
 
-The module grows across the slices; H1 lays it out once. The signature file declares the surface below; every `[<Emit>]` binding lives in a nested `Dom` module the signature does not declare, because Fable drops emits that a signature exposes (the `Locale.Intl` pattern).
+The module grows across the slices; H1 lays it out once. The signature file declares the surface below; every `[<Emit>]` binding lives in a nested `Dom` module the signature does not declare, because Fable drops emits that a signature exposes (the `Locale.Intl` pattern). Typed F# first: `navigator.share`, `navigator.clipboard`, and `ShareData` come from `Fable.Browser.Navigator`; `File.Create` from `Fable.Browser.Dom`; `URL` and `URLSearchParams` from `Fable.Browser.Url`; `Fetch.fetch` from `Fable.Fetch`. The launch-queue and Cache Storage types are typed `[<Global>]` interfaces in the module; the emits are only the platform probes, the data-carrying `canShare`, the AbortError check, and the download idiom. `File.Create`, `URL.Create`, and the package adds join `src/Briple.fsproj`.
 
 ```fsharp
 module App.Intents
@@ -114,7 +114,7 @@ An unknown host lands on Today, quiet. Every landing strips the `link` param wit
 2. `new URL` parses the value under a guard; the protocol must be `web+bripple:`. A malformed link degrades to Today with no state change.
 3. The param strip runs first, then the route, so a reload never re-enters a link, even while a fetch is in flight.
 4. Route mapping follows section 2.2 and goes through `State.goTo`, so browser back behaves as on every spoke.
-5. An `import` link with `src` must carry an `http:` or `https:` address; anything else degrades quietly. In the installed app the browser's mixed-content rule blocks insecure fetches on its own. The fetch uses the sample plan's mechanism (a `fetchText` emit inside `Intents.Dom`; `State`'s own emit cannot cross its signature), then `State.stageImport name text`. A failed fetch or a parse error lands on Today's error card, like every import.
+5. An `import` link with `src` must carry an `http:` or `https:` address; anything else degrades quietly. In the installed app the browser's mixed-content rule blocks insecure fetches on its own. The fetch is the typed `Fetch.fetch` (the package fails non-2xx on its own); `State`'s own fetch emit cannot cross its signature. A failed fetch or a parse error lands on Today's error card, like every import.
 6. The preview is the gate for `src`: the fetched text stays staged until the user commits, and nothing reaches the store before that.
 
 ### 2.4 Acceptance
@@ -162,13 +162,13 @@ cleanupOutdatedCaches();
 
 1. A `fetch` listener answers `POST` requests whose path ends with `/share-target`; every other request keeps workbox's routing. Declare the listener before the workbox calls read cleanly, but only the POST branch calls `respondWith`.
 2. The handler runs `request.formData()`. One `plan` file entry wins; its `text()` is the payload and the file's name travels with it. With no file, the `text` field is the payload and `name` is its file name.
-3. The handler stores `{ name, text }` as the response for `/__pending-share` in the cache named `briple-handoff`, then answers `Response.redirect` to the registration scope's start URL, status 303. `Response.redirect` needs an absolute URL; build it from `self.registration.scope`.
+3. The handler stores the payload as the response for `/__pending-share` in the cache named `briple-handoff`: the first line is the file name, the remainder is the plan text, so the read side parses with plain string ops. The handler answers with `Response.redirect` to the registration scope's start URL, status 303. `Response.redirect` needs an absolute URL; build it from `self.registration.scope`.
 4. The literals `briple-handoff` and `/__pending-share` appear in `sw.ts` and `Intents.fs`; both carry a keep-in-sync comment, like the sample fixture.
 
 ### 3.4 Boot handoff
 
 1. `init` runs the deep link first (section 2.3) and the handoff read last, so shared content owns the screen when a launch carries both.
-2. The read: `caches.open('briple-handoff')`, `match('/__pending-share')`, `text()`, `JSON.parse`. A missing entry, a missing `caches` API, or any error in the chain ends the work with no state change. The JSON shape is `{ name: string, text: string }`; a missing field ends the work.
+2. The read: `caches.open('briple-handoff')`, `match('/__pending-share')`, `text()`. A missing entry, a missing `caches` API, or any error in the chain ends the work with no state change. The first line is the file name, the remainder the text; a missing field ends the work.
 3. A valid entry runs `State.stageImport name text`, then `cache.delete('/__pending-share')`. A parse error lands on Today's error card, like every import.
 
 ### 3.5 Acceptance

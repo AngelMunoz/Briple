@@ -71,6 +71,10 @@ type Strings = {
   DetailMenu: string
   CircuitHeading: string -> string -> string
   CircuitHeadingOnly: string -> string
+  SharePlan: string
+  ShareDay: string
+  ShareFailed: string
+  ToastCopied: string
 }
 
 val esStrings: Strings

@@ -78,6 +78,10 @@ type Strings = {
   DetailMenu: string
   CircuitHeading: string -> string -> string
   CircuitHeadingOnly: string -> string
+  SharePlan: string
+  ShareDay: string
+  ShareFailed: string
+  ToastCopied: string
 }
 
 let esStrings = {
@@ -178,6 +182,10 @@ let esStrings = {
   CircuitHeading =
     fun circuito vueltas -> $"Circuito {circuito} · {vueltas} vueltas"
   CircuitHeadingOnly = fun circuito -> $"Circuito {circuito}"
+  SharePlan = "Compartir plan"
+  ShareDay = "Compartir día"
+  ShareFailed = "No se pudo compartir"
+  ToastCopied = "Copiado al portapapeles"
 }
 
 let enStrings = {
@@ -269,6 +277,10 @@ let enStrings = {
   DetailMenu = "Session detail"
   CircuitHeading = fun circuit rounds -> $"Circuit {circuit} · {rounds} rounds"
   CircuitHeadingOnly = fun circuit -> $"Circuit {circuit}"
+  SharePlan = "Share plan"
+  ShareDay = "Share day"
+  ShareFailed = "Could not share"
+  ToastCopied = "Copied to the clipboard"
 }
 
 let strings() : Strings =
