@@ -2,8 +2,8 @@ module Store.Tests
 
 // Browser-lane tests for the IndexedDB store: these run against the real
 // Chromium IndexedDB via the Playwright harness (Mibo.Fable pattern). They
-// cover the migration, the DTO mapping round trip, the two-store
-// transaction, and reconnection behavior.
+// cover the migration, the DTO mapping round trip, and reconnection
+// behavior.
 
 open Fable.Core
 open System
@@ -37,14 +37,14 @@ QUnit.testAsync(
 )
 
 QUnit.testAsync(
-  "put then get active round-trips through the mapping",
+  "putImport then listImports round-trips through the mapping",
   fun assert' -> promise {
     let original = sample "store-roundtrip" "2026-09-19T10:00:00"
     do! putImport original
-    let! loaded = getActiveImport()
-    assert'.ok(loaded.IsSome, "active import is present")
+    let! imports = listImports()
 
-    match loaded with
+    match imports |> List.tryFind(fun import -> import.Id = original.Id) with
+    | None -> assert'.ok(false, "the stored import is listed")
     | Some loaded ->
       assert'.equal(loaded.Id, original.Id, "id")
       assert'.equal(loaded.FileName, original.FileName, "fileName")
@@ -57,7 +57,6 @@ QUnit.testAsync(
       )
 
       assert'.equal(loaded.Raw, original.Raw, "raw survives verbatim")
-    | None -> ()
   }
 )
 
@@ -79,26 +78,10 @@ QUnit.testAsync(
 )
 
 QUnit.testAsync(
-  "deleteImport clears the active pointer when it pointed at it",
+  "deleteImport removes the row",
   fun assert' -> promise {
     do! putImport(sample "delete-me" "2026-09-19T12:00:00")
-    let! activeBefore = getActiveImport()
-
-    assert'.equal(
-      (activeBefore |> Option.map(fun s -> s.Id)),
-      Some "delete-me",
-      "active before delete"
-    )
-
     do! deleteImport "delete-me"
-    let! activeAfter = getActiveImport()
-
-    assert'.equal(
-      (activeAfter |> Option.map(fun s -> s.Id)),
-      None,
-      "active pointer cleared"
-    )
-
     let! remaining = listImports()
 
     assert'.ok(
@@ -134,10 +117,10 @@ QUnit.testAsync(
   fun assert' -> promise {
     do! putImport(sample "reopen" "2026-09-19T14:00:00")
     do! closeConnection()
-    let! loaded = getActiveImport()
+    let! imports = listImports()
 
     assert'.ok(
-      loaded |> Option.exists(fun s -> s.Id = "reopen"),
+      imports |> List.exists(fun s -> s.Id = "reopen"),
       "data survives a reconnect"
     )
   }

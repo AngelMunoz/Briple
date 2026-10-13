@@ -68,6 +68,25 @@ val defaultAnchor:
   today: DateOnly ->
     DateOnly
 
+/// First free date after the plan's run: the anchor plus the plan's full
+/// week count. The first date planChipState reads as Completed.
+val planFinish: plan: Plan -> anchor: DateOnly -> DateOnly
+
+/// Everything the staged anchor weighs: the plan, the variant it opens on,
+/// the day of the decision, and the first free dates of the stored plans.
+type AnchorDecision = {
+  Plan: Plan
+  View: Genero * string
+  Today: DateOnly
+  Finishes: DateOnly list
+}
+
+/// The staged-plan default anchor: the Monday heuristic of the decision's
+/// view, or the first free date after the latest finish when that lands
+/// later. An empty Finishes list is the no-plans-yet case; a finish in the
+/// past never backdates the start.
+val chainedAnchor: decision: AnchorDecision -> DateOnly
+
 /// One row of the visible week: the date, whether it is today, and the
 /// session projected for it. `Session = None` renders as a rest row.
 type WeekRow = {

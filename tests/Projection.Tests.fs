@@ -202,6 +202,81 @@ QUnit.test(
 )
 
 QUnit.test(
+  "planFinish: one day past the last covered date",
+  fun assert' ->
+    let finish = planFinish threeDayPlan anchor
+
+    assert'.ok(
+      sameDate finish (DateOnly(2026, 10, 5)),
+      "4 weeks from 09-07 finish on 10-05"
+    )
+
+    // The day before is still inside the plan; the finish reads Completed.
+    assert'.equal(
+      planWeek threeDayPlan anchor (addDays finish -1),
+      Some 4,
+      "the day before the finish is week 4"
+    )
+
+    assert'.ok(
+      planChipState threeDayPlan anchor finish = Completed,
+      "the finish date itself is the first free day"
+    )
+)
+
+QUnit.test(
+  "chainedAnchor: the latest finish wins when it lands after the heuristic",
+  fun assert' ->
+    // The Monday heuristic from Wednesday 09-09 is 09-07; a queued plan
+    // finishing 10-12 pushes the start there.
+    let decide finishes =
+      chainedAnchor {
+        Plan = threeDayPlan
+        View = (Hombre, "3dias")
+        Today = DateOnly(2026, 9, 9)
+        Finishes = finishes
+      }
+
+    assert'.ok(
+      sameDate (decide [ DateOnly(2026, 10, 12) ]) (DateOnly(2026, 10, 12)),
+      "queued finish -> the day after it"
+    )
+
+    assert'.ok(
+      sameDate
+        (decide [ DateOnly(2026, 10, 12); DateOnly(2026, 11, 9) ])
+        (DateOnly(2026, 11, 9)),
+      "the latest of several queued finishes wins"
+    )
+)
+
+QUnit.test(
+  "chainedAnchor: empty finishes keep the heuristic; past finishes never backdate",
+  fun assert' ->
+    let heuristic =
+      defaultAnchor threeDayPlan Hombre "3dias" (DateOnly(2026, 9, 9))
+
+    let decide finishes =
+      chainedAnchor {
+        Plan = threeDayPlan
+        View = (Hombre, "3dias")
+        Today = DateOnly(2026, 9, 9)
+        Finishes = finishes
+      }
+
+    assert'.ok(
+      sameDate (decide []) heuristic,
+      "no plans -> the Monday heuristic"
+    )
+
+    // Every stored plan completed long ago: stay near today.
+    assert'.ok(
+      sameDate (decide [ DateOnly(2026, 8, 3) ]) heuristic,
+      "completed plans never backdate"
+    )
+)
+
+QUnit.test(
   "unmapped Dia.Id never matches a weekday",
   fun assert' ->
     let weirdWeeks =

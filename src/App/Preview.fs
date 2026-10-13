@@ -42,7 +42,11 @@ let inline factGroups (s: Strings) (plan: Plan) : DomItem list =
     yield! group.Items |> List.map(fun item -> factRow item.Label)
   ])
 
-let inline startDecision (s: Strings) (anchor: Var<DateOnly>) : DomItem list = [
+let inline startDecision
+  (s: Strings)
+  (staged: StagedImport)
+  (anchor: Var<DateOnly>)
+  : DomItem list = [
   heading s.StartHeading
   Html.div [
     attr.style "display:flex;align-items:center;gap:8px"
@@ -53,6 +57,14 @@ let inline startDecision (s: Strings) (anchor: Var<DateOnly>) : DomItem list = [
     ]
     anchorField anchor ignore
   ]
+  match staged.ChainedFrom with
+  | Some finish ->
+    Html.div [
+      attr.className "caption"
+      attr.style "opacity:0.6"
+      Html.text(s.ChainedHint(dayMonth(locale(), toDateTime finish)))
+    ]
+  | None -> ()
 ]
 
 let inline actions (s: Strings) (anchor: Var<DateOnly>) : DomItem =
@@ -91,7 +103,7 @@ let view() : DomItem =
           attr.style
             "height:1px;margin:8px 0;background:currentColor;opacity:0.15"
         ]
-        yield! startDecision s anchor
+        yield! startDecision s staged anchor
         Html.show(
           (fun () -> not warnings.IsEmpty),
           fun () ->

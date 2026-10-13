@@ -9,6 +9,17 @@
 - **Shell:** `web+bripple` deep links open Briple on Today, the Plan page, or the session detail, and `web+bripple://import?src=...` pulls a plan straight from a web address into the preview; an installed app claims the scheme.
 - **Plan:** a share command next to the export command sends the plan file through the device share sheet.
 - **Today:** a share command next to the session-detail command shares the selected day's session as plain text.
+- **Import:** a plan added while another already runs proposes the first free date after the latest queued plan finishes — the next Monday in the normal case. The preview names the date it picked; choosing a date in the calendar overrides it.
+- **Today:** plans queue by date: the running plan renders until it finishes, and the next queued plan takes over on its start date with no manual switch.
+- **Plan:** the imports list shows every queued plan with the dates it covers; a row jumps to the plan's first day, and each row carries a delete command.
+
+### Changed
+
+- **Breaking (behavioral):** **Plan:** tapping a stored import no longer re-loads it as the calendar's plan; imports queue by date, so the running plan stays on until it finishes and the next one starts on its own date.
+
+### Fixed
+
+- **Today:** the day chevrons cross the weekend into the next week, and paging weeks keeps the Week view on screen instead of landing on the Day view.
 
 ## [1.1.0] - 2026-09-27
 

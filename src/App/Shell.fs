@@ -82,20 +82,19 @@ let toastShareResult (s: Strings) (result: ShareResult) : unit =
     show message Metrino.Ripple.Error
 
 let shareSelectedDay(s: Strings) : unit =
-  match parsed.Value, activeImport.Value with
-  | Some parsedPlan, Some import ->
-    let plan = parsedPlan.Plan
+  entryFor selectedDate.Value
+  |> Option.iter(fun entry ->
+    let plan = entry.Parsed.Plan
 
     Intents.shareText
       plan.Titulo
       (SessionDetail.sessionText
         s
         plan
-        import.Anchor
-        view.Value
+        entry.Import.Anchor
+        (viewFor plan)
         selectedDate.Value)
-    |> Promise.iter(toastShareResult s)
-  | _ -> ()
+    |> Promise.iter(toastShareResult s))
 
 let todayBar(s: Strings) =
   Html.metroAppBar [
@@ -145,26 +144,29 @@ let planBar(s: Strings) =
       attr.icon "download"
       attr.label s.ExportMenu
       on.click(fun _ ->
-        activeImport.Value
-        |> Option.iter(fun import ->
-          Intents.downloadText import.FileName import.Raw))
+        currentEntry()
+        |> Option.iter(fun entry ->
+          Intents.downloadText entry.Import.FileName entry.Import.Raw))
     ]
     Html.metroAppBarButton [
       attr.custom("slot", "menu")
       attr.icon "share"
       attr.label s.SharePlan
       on.click(fun _ ->
-        match parsed.Value, activeImport.Value with
-        | Some parsedPlan, Some import ->
-          Intents.shareFile parsedPlan.Plan.Titulo import.FileName import.Raw
-          |> Promise.iter(toastShareResult s)
-        | _ -> ())
+        currentEntry()
+        |> Option.iter(fun entry ->
+          Intents.shareFile
+            entry.Parsed.Plan.Titulo
+            entry.Import.FileName
+            entry.Import.Raw
+          |> Promise.iter(toastShareResult s)))
     ]
     Html.metroAppBarButton [
       attr.custom("slot", "menu")
       attr.icon "delete"
       attr.label s.RemoveMenu
-      on.click(fun _ -> removePlan())
+      on.click(fun _ ->
+        currentEntry() |> Option.iter(fun entry -> removeAt entry.Import.Id))
     ]
   ]
 

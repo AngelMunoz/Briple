@@ -35,16 +35,14 @@ val withConnection: work: (IDBDatabase -> JS.Promise<'a>) -> JS.Promise<'a>
 /// Closes and forgets the cached connection; the next call reopens.
 val closeConnection: unit -> JS.Promise<unit>
 
-/// The import flagged active in `state`, or None when nothing is loaded.
-val getActiveImport: unit -> JS.Promise<StoredImport option>
-
-/// Stores an import and flags it active in one two-store transaction.
+/// Stores an import; the row's id is the key, so an identical re-import
+/// overwrites in place.
 val putImport: import: StoredImport -> JS.Promise<unit>
 
 /// All stored imports, newest first (by the ISO importedAt timestamp).
 val listImports: unit -> JS.Promise<StoredImport list>
 
-/// Deletes an import; clears the active pointer when it pointed at it.
+/// Deletes an import row.
 val deleteImport: id: string -> JS.Promise<unit>
 
 val getStateRaw: key: string -> JS.Promise<string option>

@@ -144,7 +144,7 @@ let routeLink(value: string) : unit =
       | "plan" -> goTo PlanPage
       | "session" ->
         // The detail renders nothing without a plan; Today degrades instead.
-        if parsed.Value.IsSome && activeImport.Value.IsSome then
+        if hasPlans() then
           goTo SessionPage
       | "import" ->
         match url.searchParams.get "src" with
@@ -154,7 +154,7 @@ let routeLink(value: string) : unit =
         | None ->
           // The import intent: the load command's page when a plan is
           // loaded, Today's empty state (the load buttons) otherwise.
-          if activeImport.Value.IsSome then
+          if hasPlans() then
             goTo PlanPage
       | _ -> ()
   with _ ->

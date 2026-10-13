@@ -50,6 +50,7 @@ type Strings = {
   Cancel: string
   StartHeading: string
   StartsLabel: string
+  ChainedHint: string -> string
   WeeksCount: int -> string
   WarningsLine: int -> string
   WarningLine: string -> int -> string
@@ -123,6 +124,8 @@ let esStrings = {
   Cancel = "Cancelar"
   StartHeading = "¿Cuándo empieza?"
   StartsLabel = "Inicio:"
+  ChainedHint =
+    fun fecha -> $"Empieza cuando termina el plan anterior · {fecha}"
   WeeksCount = fun semanas -> $"{semanas} semanas"
   WarningsLine =
     fun n ->
@@ -224,6 +227,7 @@ let enStrings = {
   Cancel = "Cancel"
   StartHeading = "When does it start?"
   StartsLabel = "Start:"
+  ChainedHint = fun date -> $"Starts when the previous plan ends · {date}"
   WeeksCount = fun weeks -> $"{weeks} weeks"
   WarningsLine =
     fun n -> if n = 1 then "⚠ 1 file warning" else $"⚠ {n} file warnings"

@@ -408,7 +408,13 @@ await scenario('Re-anchor from the Plan page re-projects', 'es-ES', async (page)
     await page.waitForURL(/#\/plan/, { timeout: 8000 });
     await see(page, 'Inicio del plan', 'anchor row');
     await see(page, '14 de septiembre', 'current anchor on the field');
-    await page.getByText('14 de septiembre').click();
+    // The queue row carries the same date in its range caption, so the pick
+    // targets the anchor field's chevron button directly.
+    await page
+        .locator('button.day-chevron')
+        .filter({ hasText: '14 de septiembre' })
+        .first()
+        .click();
     const day = page.locator('metro-calendar button[aria-label="2026-09-15"]');
     await day.waitFor({ timeout: 8000 });
     await day.click();
@@ -743,6 +749,161 @@ await scenario(
         await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     },
 );
+
+// 29. Plan queue: adding plans in advance queues them behind the running
+//     plan. Each preview proposes the first free date after the latest
+//     stored finish, and Today keeps rendering the running plan. The
+//     repeated file is deliberate: a repeat is a queue entry of its own.
+await scenario('Adding plans in advance queues them behind the running plan', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await see(page, 'Full Body A', 'first plan running');
+    // The second import chains after the running plan's finish (2026-10-12).
+    await page.getByRole('button', { name: 'More options' }).click();
+    await page.getByText('Plan de entrenamiento').click();
+    await page.waitForURL(/#\/plan/, { timeout: 8000 });
+    await page.setInputFiles('input[type="file"]', fixture);
+    await see(page, '12 de octubre', 'chained start proposed');
+    await see(page, 'termina el plan anterior', 'chained hint');
+    await commitPreview(page);
+    await page.locator('header metro-hyperlink-button').first().click();
+    await see(page, 'Semana 1 de 4', 'running plan untouched');
+    await see(page, 'Full Body A', 'still week 1');
+    // The third import chains behind the queued, unstarted second plan.
+    await page.getByRole('button', { name: 'More options' }).click();
+    await page.getByText('Plan de entrenamiento').click();
+    await page.waitForURL(/#\/plan/, { timeout: 8000 });
+    await page.setInputFiles('input[type="file"]', fixture);
+    await see(page, '9 de noviembre', 'third plan chains behind the queued one');
+    await commitPreview(page);
+    await page.locator('header metro-hyperlink-button').first().click();
+    // Paging four weeks ahead lands inside the queued plan's first week.
+    await page.getByRole('tab', { name: 'Week' }).click();
+    const weekForward = page
+        .locator('metro-pivot-item[header="Week"] button.day-chevron:has(metro-icon[icon="forward"])')
+        .first();
+    await weekForward.click();
+    await weekForward.click();
+    await weekForward.click();
+    await weekForward.click();
+    await see(page, '12 de octubre', 'queued week in view');
+    await see(page, 'Semana 1 de 4', 'queued plan owns that week');
+    await see(page, '3 sesiones esta semana', 'queued plan projects its sessions');
+});
+
+// 30. The queued plan starts on its date: once the first plan's finish
+//     passes, Today renders the second plan without any manual switch.
+await scenario('Queued plan takes over when its date arrives', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await page.getByRole('button', { name: 'More options' }).click();
+    await page.getByText('Plan de entrenamiento').click();
+    await page.waitForURL(/#\/plan/, { timeout: 8000 });
+    await page.setInputFiles('input[type="file"]', fixture);
+    await see(page, '12 de octubre', 'queued start proposed');
+    await commitPreview(page);
+    // Four weeks pass; the Hoy tap re-renders Today inside the queued plan.
+    await page.clock.setFixedTime(new Date('2026-10-12T10:00:00'));
+    await page.locator('header metro-hyperlink-button').first().click();
+    await page
+        .locator('metro-pivot-item[header="Day"] button.day-chevron:has-text("Hoy")')
+        .click();
+    await see(page, '12 de octubre', "the queued plan's start date is today");
+    await see(page, 'Semana 1 de 4', 'second plan renders its first week');
+    await see(page, 'Full Body A', 'session card from the queued plan');
+    // The takeover survives a boot: the resolution is date-driven only.
+    await page.reload();
+    await page.waitForSelector('metro-app-bar', { timeout: 15000 });
+    await page
+        .locator('metro-pivot-item[header="Day"] button.day-chevron:has-text("Hoy")')
+        .click();
+    await see(page, 'Semana 1 de 4', 'second plan still owns today after reload');
+});
+
+// 31. My own date wins: a hand-picked start in the preview calendar is the
+//     date later imports chain after.
+await scenario('Calendar override moves the chain', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await page.getByRole('button', { name: 'More options' }).click();
+    await page.getByText('Plan de entrenamiento').click();
+    await page.waitForURL(/#\/plan/, { timeout: 8000 });
+    await page.setInputFiles('input[type="file"]', fixture);
+    await see(page, '12 de octubre', 'chained start proposed');
+    // A week later than the proposal, through the real calendar cell.
+    await page
+        .locator('button.day-chevron')
+        .filter({ hasText: '12 de octubre' })
+        .click();
+    const day = page.locator('metro-calendar button[aria-label="2026-10-19"]');
+    await day.waitFor({ timeout: 8000 });
+    await day.click();
+    await see(page, '19 de octubre', 'override on the field');
+    await commitPreview(page);
+    // The next import chains after the override, not the old proposal.
+    await page.setInputFiles('input[type="file"]', fixture);
+    await see(page, '16 de noviembre', 'chains after the overridden finish');
+    await commitPreview(page);
+    await page.locator('header metro-hyperlink-button').first().click();
+    await see(page, 'Semana 1 de 4', 'running plan untouched');
+});
+
+// 32. Week paging stays on Week: the day hub reports its settles with the
+//     same bubbling event name the pivot uses, so a late settle must not
+//     land in the pivot's tab state.
+await scenario('Week forward chevron stays on the Week view', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    await page.getByRole('tab', { name: 'Week' }).click();
+    const weekForward = page
+        .locator('metro-pivot-item[header="Week"] button.day-chevron:has(metro-icon[icon="forward"])')
+        .first();
+    await weekForward.click();
+    await weekForward.click();
+    await see(page, '28 de septiembre', 'second week in view');
+    // Give any settle event time to land before judging the tab state.
+    await page.waitForTimeout(600);
+    await see(page, '28 de septiembre', 'still on the paged week');
+    const activeTab = await page
+        .locator('.pivot-header[aria-selected="true"]')
+        .textContent();
+    if (activeTab.trim() !== 'Week') {
+        throw new Error(`expected the Week tab to stay active, saw "${activeTab.trim()}"`);
+    }
+});
+
+// 33. Day chevrons walk through the weekend into the next week without
+//     leaving the Day view. Each step asserts before the next click: the
+//     chevron reads the hub's settled index, so the walk is click, settle,
+//     assert.
+await scenario('Day chevrons cross the weekend into the next week', 'es-ES', async (page) => {
+    await page.getByText('Probar el plan de ejemplo').click();
+    await commitPreview(page);
+    const dayForward = page
+        .locator('metro-pivot-item[header="Day"] button.day-chevron:has(metro-icon[icon="forward"])')
+        .first();
+    // Monday 09-14 -> Friday 09-18
+    const walk = ['mar', 'mié', 'jue', 'vie'];
+    for (const day of walk) {
+        await dayForward.click();
+        await seeSelectedDay(page, day, `walked to ${day}`);
+    }
+    await dayForward.click();
+    await see(page, '19 de septiembre', 'Saturday in the date block');
+    await seeSelectedDay(page, 'sáb', 'Saturday selected');
+    await dayForward.click();
+    await see(page, '20 de septiembre', 'Sunday in the date block');
+    await dayForward.click();
+    await see(page, '21 de septiembre', 'next Monday in the date block');
+    await see(page, 'Semana 2 de 4', 'the plan line followed into week 2');
+    await page.waitForTimeout(600);
+    const activeTab = await page
+        .locator('.pivot-header[aria-selected="true"]')
+        .textContent();
+    if (activeTab.trim() !== 'Day') {
+        throw new Error(`expected the Day tab to stay active, saw "${activeTab.trim()}"`);
+    }
+});
 
 await browser.close();
 await server.close();

@@ -31,10 +31,6 @@ let today() : DateOnly =
   let now = DateTime.Now
   DateOnly(now.Year, now.Month, now.Day)
 
-let activeImport: Var<StoredImport option> = Var.create None
-
-let parsed: Var<ParsedPlan option> = Var.create None
-
 let view: Var<Genero * string> = Var.create(Hombre, "3dias")
 
 let selectedDate: Var<DateOnly> = Var.create(today())
@@ -44,15 +40,70 @@ let pivotIndex: Var<float> = Var.create 0.0
 let importError: Var<string option> = Var.create None
 
 /// A parsed import waiting in the preview. The store stays untouched until
-/// `commitImport` runs.
+/// `commitImport` runs. `ChainedFrom` is the stored finish behind a chained
+/// default anchor; `None` when the Monday heuristic produced the default.
 type StagedImport = {
   FileName: string
   Raw: string
   Parsed: ParsedPlan
   Anchor: DateOnly
+  ChainedFrom: DateOnly option
 }
 
 let pendingImport: Var<StagedImport option> = Var.create None
+
+// --- Plan queue -------------------------------------------------------------
+// The date-resolved timeline. An import covers [anchor, finish); the entry
+// a date falls in is the plan every screen renders on that date. No timer:
+// the takeover lands on the next render after the finish date passes.
+
+type QueueEntry = {
+  Import: StoredImport
+  Parsed: ParsedPlan
+}
+
+let plans: Var<QueueEntry list> = Var.create []
+
+let entryFor(date: DateOnly) : QueueEntry option =
+  match plans.Value with
+  | [] -> None
+  | entries ->
+    let finishOf entry =
+      planFinish entry.Parsed.Plan entry.Import.Anchor
+
+    let covering, others =
+      entries
+      |> List.partition(fun entry ->
+        daysBetween entry.Import.Anchor date >= 0
+        && daysBetween date (finishOf entry) > 0)
+
+    match covering with
+    | [] ->
+      match
+        others
+        |> List.filter(fun entry -> daysBetween date entry.Import.Anchor > 0)
+      with
+      | [] ->
+        // Nothing covers the date and nothing is queued: the latest
+        // finish (every plan completed) owns the quiet state.
+        others
+        |> List.maxBy(fun entry -> daysBetween date (finishOf entry))
+        |> Some
+      | upcoming ->
+        upcoming
+        |> List.minBy(fun entry -> daysBetween date entry.Import.Anchor)
+        |> Some
+    | covering ->
+      // Latest start wins a hand-moved overlap; the newest import
+      // breaks a same-anchor tie.
+      covering
+      |> List.sortBy(fun entry ->
+        (daysBetween date entry.Import.Anchor, entry.Import.ImportedAt))
+      |> List.tryLast
+
+let currentEntry() : QueueEntry option = entryFor(today())
+
+let hasPlans() : bool = not plans.Value.IsEmpty
 
 // Persistence subscription for selectedDate, created in `init` so its
 // immediate first run cannot clobber the restored value with today's date.
@@ -81,8 +132,19 @@ let setView (genero: Genero) (opcionId: string) : JS.Promise<unit> = promise {
   view.Value <- (genero, opcionId)
 }
 
+/// The view a plan renders with: the stored selection when the plan carries
+/// that variant, else the plan's own first variant. Read-only on purpose —
+/// the stored view belongs to whichever plan the user picked it on.
+let viewFor(plan: Plan) : Genero * string =
+  let genero, opcionId = view.Value
+
+  if isValidView plan genero opcionId then
+    (genero, opcionId)
+  else
+    defaultView plan
+
 let init
-  (stored: StoredImport option)
+  (stored: StoredImport list)
   (storedView: ViewState option)
   (storedDate: string option)
   : unit =
@@ -97,26 +159,26 @@ let init
         today())
     |> Option.defaultValue(today())
 
-  match stored with
+  plans.Value <-
+    stored
+    |> List.choose(fun import ->
+      parsePlan import.Raw
+      |> Result.toOption
+      |> Option.map(fun parsedPlan -> { Import = import; Parsed = parsedPlan }))
+
+  match currentEntry() with
+  | Some entry ->
+    let resolvedView, rewrite =
+      Variants.resolveView entry.Parsed.Plan storedView
+
+    view.Value <- resolvedView
+
+    if rewrite then
+      // The stored view named a missing variant: write the resolved one
+      // back so the next boot reads a valid view.
+      let genero, opcionId = resolvedView
+      setViewState { Genero = genero; OpcionId = opcionId } |> Promise.start
   | None -> ()
-  | Some import ->
-    match parsePlan import.Raw with
-    | Error _ ->
-      // Corrupted store entry: degrade to the empty state, Raw stays intact.
-      ()
-    | Ok parsedPlan ->
-      let plan = parsedPlan.Plan
-      activeImport.Value <- Some import
-      parsed.Value <- Some parsedPlan
-
-      let resolvedView, rewrite = Variants.resolveView plan storedView
-      view.Value <- resolvedView
-
-      if rewrite then
-        // The stored view named a missing variant: write the resolved one
-        // back so the next boot reads a valid view.
-        let genero, opcionId = resolvedView
-        setViewState { Genero = genero; OpcionId = opcionId } |> Promise.start
 
   // Persist every later change. Today persists as absence (the boot
   // fallback is today, so a default date never needs a record); Var
@@ -196,43 +258,70 @@ let toHex(value: uint32) : string =
 
   System.String characters
 
-let idFor (fileName: string) (raw: string) : string =
+let idFor (fileName: string) (raw: string) (stamp: float) : string =
   let stem = fileName.Split('.') |> Array.head
-  $"{stem}-{toHex(hash32 raw)}"
+  $"{stem}-{toHex(hash32 raw)}-{string(int stamp)}"
+
+// The stamp separates repeated plans: the content hash alone would fold a
+// repeat into its previous queue entry.
+[<Emit("Date.now()")>]
+let nowMs() : float = jsNative
 
 [<Emit("fetch($0).then((response) => response.text())")>]
 let fetchText(url: string) : JS.Promise<string> = jsNative
 
 let stageImport (fileName: string) (raw: string) : unit =
-  match parsePlan raw with
-  | Error error ->
-    importError.Value <-
-      Some(strings().ImportFailedDetail error.Line error.Message)
-  | Ok parsedPlan ->
-    let plan = parsedPlan.Plan
-    let genero, opcionId = defaultView plan
-    let anchor = defaultAnchor plan genero opcionId (today())
+  promise {
+    match parsePlan raw with
+    | Error error ->
+      importError.Value <-
+        Some(strings().ImportFailedDetail error.Line error.Message)
+    | Ok parsedPlan ->
+      let plan = parsedPlan.Plan
+      let genero, opcionId = defaultView plan
 
-    pendingImport.Value <-
-      Some {
-        FileName = fileName
-        Raw = raw
-        Parsed = parsedPlan
-        Anchor = anchor
-      }
+      // The queued start chains after every stored finish, repeats included:
+      // repeating a plan is a queue entry like any other.
+      let! stored = listImports()
 
-    goTo ImportPage
+      let finishes =
+        stored
+        |> List.choose(fun import ->
+          parsePlan import.Raw
+          |> Result.toOption
+          |> Option.map(fun parsed -> planFinish parsed.Plan import.Anchor))
+
+      let anchor =
+        chainedAnchor {
+          Plan = plan
+          View = genero, opcionId
+          Today = today()
+          Finishes = finishes
+        }
+
+      let heuristic = defaultAnchor plan genero opcionId (today())
+
+      pendingImport.Value <-
+        Some {
+          FileName = fileName
+          Raw = raw
+          Parsed = parsedPlan
+          Anchor = anchor
+          ChainedFrom = if sameDate anchor heuristic then None else Some anchor
+        }
+
+      goTo ImportPage
+  }
+  |> Promise.start
 
 let commitImport(anchor: DateOnly) : unit =
   match pendingImport.Value with
   | None -> ()
   | Some staged ->
     let parsedPlan = staged.Parsed
-    let plan = parsedPlan.Plan
-    let genero, opcionId = defaultView plan
 
     let import = {
-      Id = idFor staged.FileName staged.Raw
+      Id = idFor staged.FileName staged.Raw (nowMs())
       FileName = staged.FileName
       ImportedAt = nowIso()
       Anchor = anchor
@@ -241,19 +330,19 @@ let commitImport(anchor: DateOnly) : unit =
 
     promise {
       do! putImport import
-      do! setViewState { Genero = genero; OpcionId = opcionId }
-      activeImport.Value <- Some import
-      parsed.Value <- Some parsedPlan
-      view.Value <- (genero, opcionId)
+
+      plans.Value <- plans.Value @ [ { Import = import; Parsed = parsedPlan } ]
+
       importError.Value <- None
       pendingImport.Value <- None
 
       let variants =
-        plan.Bloques |> List.sumBy(fun bloque -> bloque.Opciones.Length)
+        parsedPlan.Plan.Bloques
+        |> List.sumBy(fun bloque -> bloque.Opciones.Length)
 
       toastHost.show {
         title = None
-        message = strings().ToastLoaded variants plan.Semanas
+        message = strings().ToastLoaded variants parsedPlan.Plan.Semanas
         severity = Some Metrino.Ripple.Success
         duration = Some 4000.0
       }
@@ -264,46 +353,33 @@ let commitImport(anchor: DateOnly) : unit =
     |> Promise.catch(fun err -> importError.Value <- Some(string err))
     |> Promise.start
 
-let reAnchor(anchor: DateOnly) : unit =
-  match activeImport.Value with
-  | None -> ()
-  | Some import ->
-    let updated = { import with Anchor = anchor }
+let updateAnchor (id: string) (anchor: DateOnly) : unit =
+  plans.Value
+  |> List.tryFind(fun entry -> entry.Import.Id = id)
+  |> Option.iter(fun entry ->
+    let updated = { entry.Import with Anchor = anchor }
 
     promise {
       do! putImport updated
-      activeImport.Value <- Some updated
-    }
-    |> Promise.start
 
-let removePlan() : unit =
-  match activeImport.Value with
-  | None -> ()
-  | Some import ->
-    promise {
-      do! deleteImport import.Id
-      activeImport.Value <- None
-      parsed.Value <- None
+      plans.Value <-
+        plans.Value
+        |> List.map(fun e ->
+          if e.Import.Id = id then { e with Import = updated } else e)
+    }
+    |> Promise.start)
+
+let removeAt(id: string) : unit =
+  promise {
+    do! deleteImport id
+
+    plans.Value <-
+      plans.Value |> List.filter(fun entry -> entry.Import.Id <> id)
+
+    if plans.Value.IsEmpty then
       goTo TodayPage
-    }
-    |> Promise.start
-
-let activateImport(import: StoredImport) : unit =
-  match parsePlan import.Raw with
-  | Error _ -> ()
-  | Ok parsedPlan ->
-    let plan = parsedPlan.Plan
-    let genero, opcionId = defaultView plan
-
-    promise {
-      do! putImport import
-      do! setViewState { Genero = genero; OpcionId = opcionId }
-      activeImport.Value <- Some import
-      parsed.Value <- Some parsedPlan
-      view.Value <- (genero, opcionId)
-      goTo TodayPage
-    }
-    |> Promise.start
+  }
+  |> Promise.start
 
 /// Loads the bundled sample plan into the preview.
 let importSample() : JS.Promise<unit> = promise {
@@ -325,8 +401,7 @@ let importFile(file: File) : JS.Promise<unit> = promise {
 let resetToDefaults() : unit =
   Theme.setTheme SystemTheme
   Theme.setAccent Blue
-  activeImport.Value <- None
-  parsed.Value <- None
+  plans.Value <- []
   pendingImport.Value <- None
   importError.Value <- None
   view.Value <- (Hombre, "3dias")

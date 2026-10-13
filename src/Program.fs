@@ -43,7 +43,7 @@ promise {
   and! storedAccent = Briple.Store.getStateRaw Briple.Store.AccentKey
   App.Theme.init storedTheme storedAccent
 
-  let! stored = Briple.Store.getActiveImport()
+  let! stored = Briple.Store.listImports()
   and! storedView = Briple.Store.getViewState()
   and! storedDate = Briple.Store.getStateRaw "selectedDate"
   App.State.init stored storedView storedDate

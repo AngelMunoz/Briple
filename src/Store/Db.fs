@@ -33,9 +33,6 @@ let StateStore = "state"
 let ImportedAtIndex = "importedAt"
 
 [<Literal>]
-let ActiveKey = "activeImportId"
-
-[<Literal>]
 let ViewStateKey = "viewState"
 
 [<Literal>]
@@ -195,54 +192,14 @@ let requestAsPromise(request: IDBRequest) : JS.Promise<obj> =
 
     request.onerror <- fun _ -> reject(exn(describe request.error)))
 
-/// The import flagged active in `state`, or None when nothing is loaded.
-let getActiveImport() : JS.Promise<StoredImport option> =
-  withConnection(fun db ->
-    Promise.create(fun resolve reject ->
-      let tx =
-        db.transaction(
-          [| StateStore; ImportsStore |],
-          IDBTransactionMode.Readonly
-        )
-
-      let activeRequest = tx.objectStore(StateStore).get(box ActiveKey)
-
-      // Second request is issued inside the first handler: the
-      // transaction stays alive because no await happens between
-      // the two synchronous requests.
-      activeRequest.onsuccess <-
-        fun _ ->
-          match activeRequest.result with
-          | Some id ->
-            let importRequest = tx.objectStore(ImportsStore).get(id)
-
-            importRequest.onsuccess <-
-              fun _ ->
-                match importRequest.result with
-                | Some value -> resolve(Some(ofImportObj value))
-                | None -> resolve None
-
-            importRequest.onerror <-
-              fun _ -> reject(exn(describe importRequest.error))
-          | None -> resolve None
-
-      activeRequest.onerror <-
-        fun _ -> reject(exn(describe activeRequest.error))
-
-      tx.onerror <- fun _ -> reject(exn(describe tx.error))))
-
-/// Stores an import and flags it active in one two-store transaction.
+/// Stores an import; the row's id is the key.
 let putImport(import: StoredImport) : JS.Promise<unit> =
   withConnection(fun db ->
     Promise.create(fun resolve reject ->
       let tx =
-        db.transaction(
-          [| ImportsStore; StateStore |],
-          IDBTransactionMode.Readwrite
-        )
+        db.transaction([| ImportsStore |], IDBTransactionMode.Readwrite)
 
       tx.objectStore(ImportsStore).put(toImportDto import) |> ignore
-      tx.objectStore(StateStore).put(box import.Id, box ActiveKey) |> ignore
       tx.oncomplete <- fun _ -> resolve()
       tx.onerror <- fun _ -> reject(exn(describe tx.error))))
 
@@ -270,29 +227,14 @@ let listImports() : JS.Promise<StoredImport list> =
 
       request.onerror <- fun _ -> reject(exn(describe request.error))))
 
-/// Deletes an import; clears the active pointer when it pointed at it.
+/// Deletes an import row.
 let deleteImport(id: string) : JS.Promise<unit> =
   withConnection(fun db ->
     Promise.create(fun resolve reject ->
       let tx =
-        db.transaction(
-          [| ImportsStore; StateStore |],
-          IDBTransactionMode.Readwrite
-        )
+        db.transaction([| ImportsStore |], IDBTransactionMode.Readwrite)
 
       tx.objectStore(ImportsStore).delete(box id) |> ignore
-      let activeRequest = tx.objectStore(StateStore).get(box ActiveKey)
-
-      activeRequest.onsuccess <-
-        fun _ ->
-          match activeRequest.result with
-          | Some current when unbox<string> current = id ->
-            tx.objectStore(StateStore).delete(box ActiveKey) |> ignore
-          | _ -> ()
-
-      activeRequest.onerror <-
-        fun _ -> reject(exn(describe activeRequest.error))
-
       tx.oncomplete <- fun _ -> resolve()
       tx.onerror <- fun _ -> reject(exn(describe tx.error))))
 

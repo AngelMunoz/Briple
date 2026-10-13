@@ -43,6 +43,7 @@ type Strings = {
   Cancel: string
   StartHeading: string
   StartsLabel: string
+  ChainedHint: string -> string
   WeeksCount: int -> string
   WarningsLine: int -> string
   WarningLine: string -> int -> string

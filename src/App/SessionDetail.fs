@@ -285,10 +285,16 @@ let view() : DomItem =
 
   Html.div [
     Html.show(
-      (fun () -> parsed.Value.IsSome && activeImport.Value.IsSome),
+      (fun () -> hasPlans()),
       fun () ->
-        let parsedPlan = parsed.Value |> Option.get
-        let import = activeImport.Value |> Option.get
-        content s parsedPlan.Plan import.Anchor view.Value selectedDate.Value
+        entryFor selectedDate.Value
+        |> Option.map(fun entry ->
+          content
+            s
+            entry.Parsed.Plan
+            entry.Import.Anchor
+            (viewFor entry.Parsed.Plan)
+            selectedDate.Value)
+        |> Option.defaultValue Html.none
     )
   ]

@@ -179,6 +179,30 @@ let defaultAnchor
   else
     addDays monday 7
 
+/// First free date after the plan's run: the anchor plus the plan's full
+/// week count. planChipState reads it as the first Completed day.
+let planFinish (plan: Plan) (anchor: DateOnly) : DateOnly =
+  addDays anchor (7 * plan.Semanas)
+
+/// Everything the staged anchor weighs: the plan, the variant it opens on,
+/// the day of the decision, and the first free dates of the stored plans.
+type AnchorDecision = {
+  Plan: Plan
+  View: Genero * string
+  Today: DateOnly
+  Finishes: DateOnly list
+}
+
+// Ordering goes through daysBetween, never DateOnly comparison.
+let chainedAnchor(decision: AnchorDecision) : DateOnly =
+  let genero, opcionId = decision.View
+
+  decision.Finishes
+  |> List.fold
+    (fun latest finish ->
+      if daysBetween latest finish > 0 then finish else latest)
+    (defaultAnchor decision.Plan genero opcionId decision.Today)
+
 // --- Week rows and the plan chip --------------------------------------------
 
 /// One row of the visible week: the date, whether it is today, and the

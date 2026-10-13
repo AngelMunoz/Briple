@@ -11,6 +11,7 @@ open Metrino.Ripple
 open Browser.Types
 open Briple.Store
 open Plan.Types
+open Plan.Projection
 open App.Locale
 open App.Variants
 open App.Chrome
@@ -37,8 +38,12 @@ let inline rowTitle(label: string) : string =
   | -1 -> ""
   | index -> label.Substring(index + 3)
 
-let variantRow (s: Strings) (genero: Genero) (item: VariantItem) : DomItem =
-  let isActive() = view.Value = (genero, item.Id)
+let variantRow
+  (s: Strings)
+  (cell: Genero * VariantItem)
+  (isActive: unit -> bool)
+  : DomItem =
+  let genero, item = cell
 
   Html.button [
     attr.className(fun () ->
@@ -61,14 +66,19 @@ let variantRow (s: Strings) (genero: Genero) (item: VariantItem) : DomItem =
 
 let inline variantList (s: Strings) (plan: Plan) : DomItem list = [
   heading s.VariantsHeading
+  let activeView = viewFor plan
+
   yield!
     groups plan s.DiasUnit
     |> List.collect(fun group ->
-      group.Items |> List.map(fun item -> variantRow s group.Genero item))
+      group.Items
+      |> List.map(fun item ->
+        variantRow s (group.Genero, item) (fun () ->
+          activeView = (group.Genero, item.Id))))
 ]
 
-let anchorRow (s: Strings) (active: StoredImport) : DomItem list =
-  let anchor = Var.create active.Anchor
+let anchorRow (s: Strings) (entry: QueueEntry) : DomItem list =
+  let anchor = Var.create entry.Import.Anchor
 
   [
     Html.div [
@@ -76,7 +86,7 @@ let anchorRow (s: Strings) (active: StoredImport) : DomItem list =
       attr.style "opacity:0.6"
       Html.text s.AnchorLabel
     ]
-    anchorField anchor reAnchor
+    anchorField anchor (updateAnchor entry.Import.Id)
   ]
 
 let inline loadFile(s: Strings) : DomItem list = [
@@ -119,77 +129,81 @@ let inline guideSection (s: Strings) (plan: Plan) : DomItem list = [
       ])
 ]
 
-let historyStamp (s: Strings) (importedAt: string) : string =
-  try
-    let day = Iso.toDateOnly importedAt.[0..9]
+// The queue row's right caption: "14 de septiembre – 11 de octubre", the
+// covered range.
+let queueRange(entry: QueueEntry) : string =
+  let l = locale()
+  let start = dayMonth(l, toDateTime entry.Import.Anchor)
+  let lastDay = addDays (planFinish entry.Parsed.Plan entry.Import.Anchor) -1
+  $"{start} – {dayMonth(l, toDateTime lastDay)}"
 
-    if day = today() then
-      s.Hoy
-    else
-      dayMonth(locale(), toDateTime day)
-  with _ ->
-    ""
+let queueRow(entry: QueueEntry) : DomItem =
+  let lastDay = addDays (planFinish entry.Parsed.Plan entry.Import.Anchor) -1
 
-let inline historyRow
-  (s: Strings)
-  (currentId: string)
-  (import: StoredImport)
-  : DomItem =
-  let isCurrent = import.Id = currentId
+  let isCurrent() =
+    daysBetween entry.Import.Anchor (today()) >= 0
+    && daysBetween (today()) lastDay >= 0
 
-  Html.button [
-    attr.className(if isCurrent then "week-row today" else "week-row")
-    on.click(fun _ ->
-      if not isCurrent then
-        activateImport import)
-    Html.span [
-      attr.className "body"
-      attr.style "flex:1;text-align:left"
-      Html.text import.FileName
+  Html.div [
+    attr.style "display:flex;align-items:stretch;gap:8px"
+    Html.button [
+      attr.className(fun () ->
+        if isCurrent() then "week-row today" else "week-row")
+
+      attr.style "flex:1"
+      on.click(fun _ ->
+        selectedDate.Value <- entry.Import.Anchor
+        pivotIndex.Value <- 0.0
+        goTo TodayPage)
+      Html.span [
+        attr.className "body"
+        attr.style "flex:1;text-align:left"
+        Html.text entry.Import.FileName
+      ]
+      Html.span [
+        attr.className "caption"
+        attr.style "opacity:0.6"
+        Html.text(queueRange entry)
+      ]
     ]
-    Html.span [
-      attr.className "caption"
-      attr.style "opacity:0.6"
-      Html.text(historyStamp s import.ImportedAt)
+    Html.button [
+      attr.className "day-chevron"
+      attr.custom("aria-label", "delete")
+      on.click(fun _ -> removeAt entry.Import.Id)
+      Html.metroIcon [ attr.icon "delete" ]
     ]
   ]
 
-let importsSection (s: Strings) (currentId: string) : DomItem =
-  let history: Var<StoredImport list> = Var.create []
-
-  listImports()
-  |> Promise.map(fun imports -> history.Value <- imports)
-  |> ignore
-
+let queueSection(s: Strings) : DomItem =
   Html.div [
     attr.style "display:flex;flex-direction:column"
     heading s.ImportsHeading
     Html.switchWith(
-      (fun () -> history.Value),
-      fun imports ->
+      (fun () -> plans.Value),
+      fun entries ->
         Html.div [
           attr.style "display:flex;flex-direction:column"
-          yield! imports |> List.map(historyRow s currentId)
+          yield! entries |> List.map queueRow
         ]
     )
   ]
 
 let inline content(s: Strings) : DomItem =
-  match parsed.Value, activeImport.Value with
-  | Some parsedPlan, Some active ->
-    let plan = parsedPlan.Plan
+  match currentEntry() with
+  | Some entry ->
+    let plan = entry.Parsed.Plan
 
     Html.div [
       attr.style
         "display:flex;flex-direction:column;gap:12px;padding:0 16px 16px"
       yield! titleBlock s plan
       yield! variantList s plan
-      yield! anchorRow s active
+      yield! anchorRow s entry
       yield! loadFile s
       yield! guideSection s plan
-      importsSection s active.Id
+      queueSection s
     ]
-  | _ -> Html.none
+  | None -> Html.none
 
 let inline emptyPlan(s: Strings) : DomItem =
   Html.p [
@@ -203,9 +217,6 @@ let view() : DomItem =
 
   Html.div [
     backHeader s.PagePlan
-    Html.show((fun () -> parsed.Value.IsNone), fun () -> emptyPlan s)
-    Html.show(
-      (fun () -> parsed.Value.IsSome && activeImport.Value.IsSome),
-      fun () -> content s
-    )
+    Html.show((fun () -> plans.Value.IsEmpty), fun () -> emptyPlan s)
+    Html.show((fun () -> hasPlans()), fun () -> content s)
   ]
