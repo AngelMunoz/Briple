@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-16
+
 ### Added
 
 - **Import:** `.briple` plan files open in Briple from the file manager on desktop; the app stages them through the usual preview.
